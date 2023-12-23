@@ -1,27 +1,46 @@
-Spotify -> Plex
+# Plexify - A Spotify to Plex Synchronization
 -
-[![](https://img.shields.io/docker/automated/bassrock/spotify-plex-playlists.svg)](https://cloud.docker.com/repository/docker/bassrock/spotify-plex-playlists) [![](https://img.shields.io/docker/pulls/bassrock/spotify-plex-playlists.svg)](https://img.shields.io/docker/pulls/bassrock/spotify-plex-playlists.svg) [![](https://img.shields.io/docker/stars/bassrock/spotify-plex-playlists.svg)](https://cloud.docker.com/repository/docker/bassrock/spotify-plex-playlists)
+This application synchronizes your Spotify playlists with your Plex music library. It converts Spotify URIs to Plex playlists and updates them at a specified interval. Download missing tracks with spotdl.
 
-Converts Spotify URI's to Plex Playlists on a Specified Interval.
+# Disclaimer
 
-Setup
-----
-Set the following Docker environment variables
+This project is intended for educational and demonstration purposes only. It is not intended to be used for illegal activities, including but not limited to the unauthorized downloading or distribution of copyrighted music or other media.
 
-`SPOTIPY_CLIENT_ID` - A Spotify client id created here: https://developer.spotify.com/dashboard/login
+The author of this project does not condone or support illegal activities. The author is not responsible for any misuse of this project for illegal activities, and will not be held liable for any damages or legal issues that arise from such misuse.
 
-`SPOTIPY_CLIENT_SECRET` - The Spotify client secret from the created client id
+Users are responsible for ensuring that their use of this project complies with all applicable laws and regulations, including copyright laws. If you choose to use this project, you do so at your own risk.
 
-`PLEX_URL` - Your plex url: `http://plex:32400`
+## Features
 
-`PLEX_TOKEN` - Your plex token found by https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/
+- Synchronizes all public playlists of a Spotify user
+- Synchronizes specific public Spotify playlists
+- Only creates playlists on Plex for songs that exist in your Plex library
+- Downloads songs not found in Plex library for local storage and playback
+- Supports setting synchronization interval
 
-`SPOTIFY_URIS` - A comma seperated list of the spotify URI's you would like to import: `spotify:user:sonosplay,spotify:user:sonosplay:playlist:6nQjiSQhdf84s2AAxweRBv`
+## Setup
 
-`SECONDS_TO_WAIT` - How many seconds to wait before syncs
+To set up the application, you need to configure several environment variables:
+
+- `SPOTIPY_CLIENT_ID`: Your Spotify client ID. You can create one [here](https://developer.spotify.com/dashboard/login).
+- `SPOTIPY_CLIENT_SECRET`: The client secret of your Spotify client ID.
+- `PLEX_URL`: The URL of your Plex server, e.g., `http://plex:32400`.
+- `PLEX_TOKEN`: Your Plex token. You can find it by following [these instructions](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/).
+- `SPOTIFY_URIS`: A comma-separated list of the Spotify URIs you want to import. You can specify either a user's URI to import all public playlists owned by the user, or a playlist URI to import a specific public playlist. For example: `spotify:user:sonosplay,spotify:user:sonosplay:playlist:6nQjiSQhdf84s2AAxweRBv`.
+- `SECONDS_TO_WAIT`: The number of seconds to wait between synchronizations.
 
 The following URI's are supported:
 * A user's URI which will import all public playlists a user owns: `spotify:user:sonosplay`
 * A playlist URI which imports a specific playlist (must be public): `spotify:user:sonosplay:playlist:6nQjiSQhdf84s2AAxweRBv`
 
 Playlists will only be created on Plex if your Plex instance has at least one of the songs. Only songs found on your Plex will be created in the Plex Playlilst
+
+## Usage
+
+After setting up the environment variables, you can run the application. It will start synchronizing your Spotify playlists with your Plex library at the specified interval.
+
+Please note that playlists will only be created on Plex for songs that exist in your Plex library. If a song from a Spotify playlist is not found in your Plex library, the application will attempt to download it for local storage and playback.
+
+## Docker
+
+This application is available as a Docker image. TODO
