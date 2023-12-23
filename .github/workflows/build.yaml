@@ -1,0 +1,32 @@
+name: Build and Test Docker Image
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Out Repository
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Build Docker Image
+        run: docker buildx build --file Dockerfile --tag nyancod3r/plexify:latest .
+
+      - name: Test Docker Image
+        run: |
+          # Add your test commands here to ensure the container is functioning correctly
+          # docker run nyancod3r/plexify:latest /path/to/test-script.sh
+
+      - name: Log in to Docker Hub
+        run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Tag and Push Docker Image
+        run: |
+          version=$(date +'%Y%m%d%H%M%S')
+          docker buildx build --file Dockerfile --tag nyancod3r/plexify:$version --push .
