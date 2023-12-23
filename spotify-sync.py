@@ -14,18 +14,12 @@ import subprocess
 
 
 def filterPlexArray(plexItems=[], song="", artist="") -> List[Track]:
-    for item in list(plexItems):
-        if type(item) is not Track:
-            plexItems.remove(item)
-            continue
-        if item.title.lower() != song.lower():
-            plexItems.remove(item)
-            continue
-        artistItem = item.artist()
-        if artistItem.title.lower() != artist.lower():
-            plexItems.remove(item)
-            continue
-
+    plexItems = [
+        item for item in plexItems
+        if isinstance(item, Track) and
+        item.title.lower() == song.lower() and
+        item.artist().title.lower() == artist.lower()
+    ]
     return plexItems
 
 
