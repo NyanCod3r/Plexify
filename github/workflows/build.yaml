@@ -20,7 +20,6 @@ jobs:
 
       - name: Test Docker Image
         run: |
-          # Add your test commands here to ensure the container is functioning correctly
           # docker run nyancod3r/plexify:latest /path/to/test-script.sh
 
       - name: Log in to Docker Hub
