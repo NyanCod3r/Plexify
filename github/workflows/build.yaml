@@ -18,9 +18,12 @@ jobs:
       - name: Build Docker Image
         run: docker buildx build --file Dockerfile --tag nyancod3r/plexify:latest .
 
+      - name: Run Docker Image
+        run: |
+          docker run -d --name plexify nyancod3r/plexify:latest
       - name: Test Docker Image
         run: |
-          # docker run nyancod3r/plexify:latest /path/to/test-script.sh
+          docker exec --name plexify ping google.com          
 
       - name: Log in to Docker Hub
         run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
