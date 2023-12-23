@@ -9,6 +9,8 @@ from spotipy.oauth2 import SpotifyClientCredentials
 import eyed3
 from typing import List
 from plexapi.exceptions import BadRequest, NotFound
+import spotdl
+import subprocess
 
 
 def filterPlexArray(plexItems=[], song="", artist="") -> List[Track]:
@@ -65,20 +67,27 @@ def getPlexTracks(plex: PlexServer, spotifyTracks: [], playlistName) -> List[Tra
         logging.info("Searching Plex for: %s by %s" % (track['name'], track['artists'][0]['name']))
         try:
             musicTracks = plex.search(track['name'], mediatype='track')
-        except:
-            logging.info("Issue making plex request")
+            exact_track = next((t for t in musicTracks if t.title == track['name'] and t.grandparentTitle == track['artists'][0]['name']), None)
+        except Exception as e:
+            logging.info(f"Issue making plex request: {str(e)}")
             continue
-        if len(musicTracks) > 0:
+        if exact_track is not None:
             plexMusic = filterPlexArray(musicTracks, track['name'], track['artists'][0]['name'])
             if len(plexMusic) > 0:
                 logging.info("Found Plex Song: %s by %s" % (track['name'], track['artists'][0]['name']))
                 plexTracks.append(plexMusic[0])
         else:
-            logging.info("Could not find Plex Song: %s by %s with uri %s" % (track['name'], track['artists'][0]['name'], track['external_urls']['spotify']))
+            logging.info("Could not find song in Plex Library: %s by %s with is a Plex Library present with that name?" % (track['name'], track['artists'][0]['name']))
             sp_uri=track['external_urls']['spotify']
             createFolder(playlistName)
             try:
-                os.system('spotdl --output "' + os.environ.get('SPOTIPY_PATH') + '/' + playlistName + '/{artist} - {title}.{output-ext}" --download ' + sp_uri)
+                command = [
+                    'spotdl' , '--output',
+                    os.path.join(os.environ.get('SPOTIPY_PATH'), playlistName, '{artist} - {title}.{output-ext}'),
+                    '--download', sp_uri
+                ]
+
+                subprocess.run(command, check=True)
                 downloaded_file = os.environ.get('SPOTIPY_PATH') + '/' + playlistName + '/' + track['artists'][0]['name'] + ' - ' + track['name'] + '.mp3'
                 # If downloaded_file contains a question mark
                 if "?" in downloaded_file or ":" in downloaded_file:
@@ -104,8 +113,8 @@ def getPlexTracks(plex: PlexServer, spotifyTracks: [], playlistName) -> List[Tra
                 audiofile.tag.save()
 
                 #time.sleep(10)
-            except:
-                logging.info("Issue downloading song or no song found")
+            except Exception as e:
+                logging.info(f"Issue downloading song or no song found. Error: {str(e)}")
                 continue
     return plexTracks
 
@@ -149,22 +158,16 @@ def parseSpotifyURI(uriString: str) -> {}:
 
     return spotifyUriParts
 
-def delete_unmatched_files(plex: PlexServer, spotifyTracks: [], playlistName) -> List[Track]:
-    # playlistName = playlist['name']
-    # Search with plexapi for the Plex playlist
+def delete_unmatched_files(plex: PlexServer, spotifyTracks: [], playlistName: str) -> List[Track]:
     try:
         plexPlaylist = plex.playlist(playlistName)
-        # Search with plexapi for the Plex playlist contents
         plexTracks = plexPlaylist.items()
-        print('Plex tracks:', plexTracks)
 
         # Get the list of tracks in the Spotify playlist
-        spotify_tracks = [track['track']['name'] for track in playlist['tracks']['items']]
-        print('Spotify tracks:', spotify_tracks)
+        spotify_tracks = [track['track']['name'] for track in spotifyTracks]
 
         # Find the tracks that are in the Plex playlist but not in the Spotify playlist
         tracks_to_delete = set(track.title for track in plexTracks) - set(spotify_tracks)
-        print('Tracks to delete:', tracks_to_delete)
 
         # Get the Plex playlist
         plex_playlist = plex.playlist(playlistName)
@@ -181,8 +184,8 @@ def delete_unmatched_files(plex: PlexServer, spotifyTracks: [], playlistName) ->
                 plex_playlist.removeItems(track)
                 # Delete the track from the Plex library
                 track.delete()
-    except:
-        logging.info("Issue deleting tracks from playlist %s" % playlistName)
+    except Exception as e:
+        logging.info(f"Issue deleting tracks from playlist: {str(e)}")
 
 
 def runSync(plex : PlexServer, sp : spotipy.Spotify, spotifyURIs: []):
@@ -199,7 +202,8 @@ def runSync(plex : PlexServer, sp : spotipy.Spotify, spotifyURIs: []):
 
     for playlist in playlists:
         createPlaylist(plex, sp, playlist)
-        delete_unmatched_files(plex, sp, playlist)
+        playlistName = playlist['name']
+        delete_unmatched_files(plex, getSpotifyTracks(sp, playlist), playlistName)
     logging.info('Finished a Sync Operation')
 
 if __name__ == '__main__':
