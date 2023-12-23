@@ -77,7 +77,7 @@ def getPlexTracks(plex: PlexServer, spotifyTracks: [], playlistName) -> List[Tra
                 logging.info("Found Plex Song: %s by %s" % (track['name'], track['artists'][0]['name']))
                 plexTracks.append(plexMusic[0])
         else:
-            logging.info("Could not find song in Plex Library: %s by %s with is a Plex Library present with that name?" % (track['name'], track['artists'][0]['name']))
+            logging.info("Could not find song in Plex Library: %s by %s , downloading" % (track['name'], track['artists'][0]['name']))
             sp_uri=track['external_urls']['spotify']
             createFolder(playlistName)
             try:
