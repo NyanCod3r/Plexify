@@ -201,7 +201,7 @@ def runSync(plex : PlexServer, sp : spotipy.Spotify, spotifyURIs: []):
     logging.info('Finished a Sync Operation')
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
     spotifyUris = os.environ.get('SPOTIFY_URIS')
 
     if spotifyUris is None:
