@@ -11,6 +11,9 @@ jobs:
     steps:
       - name: Check Out Repository
         uses: actions/checkout@v2
+        
+      - name: Set version to 1.0
+        run: echo "version=1.0" >> $GITHUB_ENV
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
