@@ -18,6 +18,8 @@ Users are responsible for ensuring that their use of this project complies with 
 - Downloads songs not found in Plex library for local storage and playback
 - Supports setting synchronization interval
 
+[![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)]()
+
 ## Setup
 
 To set up the application, you need to configure several environment variables:
