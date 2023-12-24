@@ -22,9 +22,6 @@ jobs:
         id: vars
         run: echo ::set-output name=version::$(cat VERSION)
 
-      - name: Increment version
-        run: echo $((${{ steps.vars.outputs.version }} + 0.1)) > VERSION
-
       - name: Commit and push version increment
         run: |
           git config --local user.email "action@github.com"
