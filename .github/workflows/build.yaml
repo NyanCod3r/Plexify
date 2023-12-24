@@ -28,7 +28,8 @@ jobs:
       - name: Log in to Docker Hub
         run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Tag and Push Docker Image
+      - name: Push Docker Image
         run: |
-          version=$(date +'%Y%m%d%H%M%S')
-          docker buildx build --file Dockerfile --tag nyancod3r/plexify:$version --push .
+          echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+          docker tag plexify:latest ${{ secrets.DOCKER_USERNAME }}/plexify:v${{ github.run_number }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/plexify:v${{ github.run_number }}
