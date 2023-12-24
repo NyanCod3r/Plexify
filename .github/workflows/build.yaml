@@ -22,11 +22,18 @@ jobs:
         id: vars
         run: echo ::set-output name=version::$(cat VERSION)
 
+      - name: Increment version
+        run: echo $(echo "${{ steps.vars.outputs.version }} + 0.1" | bc) > VERSION
+
+      - name: Print incremented version
+        run: cat VERSION
+
       - name: Commit and push version increment
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git commit -m "Increment version" -a
+          git add VERSION
+          git commit -m "Increment version"
           git push
 
       - name: Build and Push Docker Image
