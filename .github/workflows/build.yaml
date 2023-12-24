@@ -20,20 +20,16 @@ jobs:
 
       - name: Get current version
         id: vars
-        run: echo ::set-output name=version::$(cat VERSION)
+        run: echo "version=$(cat VERSION)" >> $GITHUB_ENV
 
       - name: Print current version
-        run: echo "Current version is ${{ steps.vars.outputs.version }}"
+        run: echo "Current version is ${{ env.version }}"
 
       - name: Increment version
-        run: echo $(echo "${{ steps.vars.outputs.version }} + 0.1" | bc) | tee VERSION
+        run: echo $(echo "${{ env.version }} + 0.1" | bc) | tee VERSION
 
-      - name: Get incremented version
-        id: incvars
-        run: echo ::set-output name=version::$(cat VERSION)
-
-      - name: Print incremented version
-        run: echo "Incremented version is ${{ steps.incvars.outputs.version }}"
+      - name: Update version in environment
+        run: echo "version=$(cat VERSION)" >> $GITHUB_ENV
 
       - name: Commit and push version increment
         run: |
