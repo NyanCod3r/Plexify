@@ -18,13 +18,27 @@ jobs:
       - name: Log in to Docker Hub
         run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
 
+      - name: Get current version
+        id: vars
+        run: echo ::set-output name=version::$(cat VERSION)
+
+      - name: Increment version
+        run: echo $((${{ steps.vars.outputs.version }} + 0.1)) > VERSION
+
+      - name: Commit and push version increment
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git commit -m "Increment version" -a
+          git push
+
       - name: Build and Push Docker Image
         run: |
-          docker buildx build --file Dockerfile --tag ${{ secrets.DOCKER_USERNAME }}/plexify:v${{ github.run_number }} --push .
+          docker buildx build --file Dockerfile --tag ${{ secrets.DOCKER_USERNAME }}/plexify:${{ steps.vars.outputs.version }} --push .
 
       - name: Run Docker Image
         run: |
-          docker run -d --name plexify ${{ secrets.DOCKER_USERNAME }}/plexify:v${{ github.run_number }}
+          docker run -d --name plexify ${{ secrets.DOCKER_USERNAME }}/plexify:${{ steps.vars.outputs.version }}
 
       - name: Test Docker Image
         run: |
