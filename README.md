@@ -17,8 +17,8 @@ Users are responsible for ensuring that their use of this project complies with 
 - Only creates playlists on Plex for songs that exist in your Plex library
 - Downloads songs not found in Plex library for local storage and playback
 - Supports setting synchronization interval
-
-[![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)]()
+  
+![](run_example.gif)
 
 ## Setup
 
