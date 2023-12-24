@@ -23,7 +23,7 @@ jobs:
           docker run -d --name plexify nyancod3r/plexify:latest
       - name: Test Docker Image
         run: |
-          docker exec --name plexify ping google.com          
+          docker exec plexify curl -I https://google.com      
 
       - name: Log in to Docker Hub
         run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
