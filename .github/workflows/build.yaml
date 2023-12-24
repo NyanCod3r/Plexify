@@ -15,21 +15,17 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
-      - name: Build Docker Image
-        run: docker buildx build --file Dockerfile --tag nyancod3r/plexify:latest .
+      - name: Log in to Docker Hub
+        run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+
+      - name: Build and Push Docker Image
+        run: |
+          docker buildx build --file Dockerfile --tag ${{ secrets.DOCKER_USERNAME }}/plexify:v${{ github.run_number }} --push .
 
       - name: Run Docker Image
         run: |
-          docker run -d --name plexify nyancod3r/plexify:latest
+          docker run -d --name plexify ${{ secrets.DOCKER_USERNAME }}/plexify:v${{ github.run_number }}
+
       - name: Test Docker Image
         run: |
-          docker exec plexify curl -I https://google.com      
-
-      - name: Log in to Docker Hub
-        run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Push Docker Image
-        run: |
-          echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-          docker tag plexify:latest ${{ secrets.DOCKER_USERNAME }}/plexify:v${{ github.run_number }}
-          docker push ${{ secrets.DOCKER_USERNAME }}/plexify:v${{ github.run_number }}
+          docker exec plexify curl -I https://google.com
