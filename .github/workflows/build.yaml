@@ -31,7 +31,10 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          docker buildx build --file Dockerfile --tag ${{ secrets.DOCKER_USERNAME }}/plexify:${{ steps.vars.outputs.version }} --push .
+          docker buildx build --file Dockerfile \
+          --tag ${{ secrets.DOCKER_USERNAME }}/plexify:${{ steps.vars.outputs.version }} \
+          --tag ${{ secrets.DOCKER_USERNAME }}/plexify:latest \
+          --push .
 
       - name: Run Docker Image
         run: |
