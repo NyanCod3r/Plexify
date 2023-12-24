@@ -28,4 +28,4 @@ jobs:
 
       - name: Test Docker Image
         run: |
-          docker exec plexify /bin/sh -c "echo 'I'm running...'"
+          docker exec plexify /bin/sh -c "echo \"I'm running...\""
