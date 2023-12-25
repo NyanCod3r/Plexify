@@ -34,12 +34,12 @@ jobs:
         run: |
           docker run --rm \
           -t test \
-          -e SPOTIFY_URIS=your_uri \
+          -e SPOTIFY_URIS=${{ secrets.SPOTIFY_URIS }} \
           -e SECONDS_TO_WAIT=1800 \
-          -e PLEX_URL=your_plex_url \
-          -e PLEX_TOKEN=your_plex_token \
-          -e SPOTIPY_PATH=your_spotipy_path \
-          your_image_name${{ env.TEST_TAG }}
+          -e PLEX_URL=${ secrets.PLEX_URL} \
+          -e PLEX_TOKEN={ secrets.PLEX_TOKEN } \
+          -e SPOTIPY_PATH=${ secrets.SPOTIPY_PATH } \
+          plexify${{ env.TEST_TAG }}
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
