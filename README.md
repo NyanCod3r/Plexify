@@ -45,4 +45,4 @@ Please note that playlists will only be created on Plex for songs that exist in 
 
 ## Docker
 
-This application is available as a Docker image. TODO
+This application is available as a Docker image.
