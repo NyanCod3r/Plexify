@@ -26,6 +26,8 @@ jobs:
           else
             echo "version=1.0" >> $GITHUB_ENV
           fi
+          echo "VERSION file: $(cat VERSION)"
+          echo "version environment variable: ${{ env.version }}"
 
       - name: Print current version
         run: echo "Current version is ${{ env.version }}"
