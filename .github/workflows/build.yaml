@@ -11,9 +11,6 @@ jobs:
     steps:
       - name: Check Out Repository
         uses: actions/checkout@v2
-        
-      - name: Set version to 1.0
-        run: echo "version=1.0" >> $GITHUB_ENV
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -23,7 +20,12 @@ jobs:
 
       - name: Get current version
         id: vars
-        run: echo "version=$(cat VERSION)" >> $GITHUB_ENV
+        run: |
+          if [ -s VERSION ]; then
+            echo "version=$(cat VERSION)" >> $GITHUB_ENV
+          else
+            echo "version=1.0" >> $GITHUB_ENV
+          fi
 
       - name: Print current version
         run: echo "Current version is ${{ env.version }}"
@@ -32,9 +34,7 @@ jobs:
         run: echo $(echo "${{ env.version }} + 0.1" | bc) | tee VERSION
 
       - name: Update version in environment
-        run: |
-          echo "version=$(cat VERSION)" >> $GITHUB_ENV
-          echo "{markdown content}" >> $GITHUB_STEP_SUMMARY
+        run: echo "version=$(cat VERSION)" >> $GITHUB_ENV
 
       - name: Commit and push version increment
         run: |
@@ -43,26 +43,18 @@ jobs:
           git add VERSION
           git commit -m "Increment version"
           git push
-          echo "{markdown content}" >> $GITHUB_STEP_SUMMARY
 
       - name: Build and Push Docker Image
         run: |
           docker buildx build --file Dockerfile \
-          --tag ${{ secrets.DOCKER_USERNAME }}/plexify:${{ steps.incvars.outputs.version }} \
+          --tag ${{ secrets.DOCKER_USERNAME }}/plexify:${{ env.version }} \
           --tag ${{ secrets.DOCKER_USERNAME }}/plexify:latest \
           --push .
-          echo "{markdown content}" >> $GITHUB_STEP_SUMMARY
 
       - name: Run Docker Image
         run: |
-          docker run -d --name plexify ${{ secrets.DOCKER_USERNAME }}/plexify:${{ steps.incvars.outputs.version }}
-          echo "{markdown content}" >> $GITHUB_STEP_SUMMARY
+          docker run -d --name plexify ${{ secrets.DOCKER_USERNAME }}/plexify:${{ env.version }}
 
       - name: Test Docker Image
         run: |
           docker exec plexify /bin/sh -c "echo \"I'm running...\""
-          echo "{markdown content}" >> $GITHUB_STEP_SUMMARY
-
-      - name: Summary
-        run: |
-          echo "{markdown content}" >> $GITHUB_STEP_SUMMARY
