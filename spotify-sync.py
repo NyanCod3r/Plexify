@@ -13,17 +13,7 @@ import spotdl
 import subprocess
 import argparse
 
-
-# Parse command-line arguments
-parser = argparse.ArgumentParser()
-parser.add_argument('-t1', '--test', help='Run in test mode')
-args = parser.parse_args()
-
-# If test mode is enabled, exit the script
-
-if args.test == 'test':
-    print('Test successful')
-else:
+try:
     def filterPlexArray(plexItems=[], song="", artist="") -> List[Track]:
         plexItems = [
             item for item in plexItems
@@ -238,3 +228,5 @@ else:
         while True:
             runSync(plex, sp, spotifyMainUris)
             time.sleep(secondsToWait)
+except Exception as e:
+    logging.info(f"Are testing?: {str(e)}")
