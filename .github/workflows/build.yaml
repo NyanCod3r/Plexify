@@ -22,7 +22,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: user/app:latest
+          tags: nyancod3r/plexify:latest
 
       - name: Test Docker Image
         run: |
