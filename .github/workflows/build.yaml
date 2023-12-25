@@ -32,7 +32,9 @@ jobs:
         run: echo $(echo "${{ env.version }} + 0.1" | bc) | tee VERSION
 
       - name: Update version in environment
-        run: echo "version=$(cat VERSION)" >> $GITHUB_ENV
+        run: |
+          echo "version=$(cat VERSION)" >> $GITHUB_ENV
+          echo "{markdown content}" >> $GITHUB_STEP_SUMMARY
 
       - name: Commit and push version increment
         run: |
@@ -41,6 +43,7 @@ jobs:
           git add VERSION
           git commit -m "Increment version"
           git push
+          echo "{markdown content}" >> $GITHUB_STEP_SUMMARY
 
       - name: Build and Push Docker Image
         run: |
@@ -48,11 +51,18 @@ jobs:
           --tag ${{ secrets.DOCKER_USERNAME }}/plexify:${{ steps.incvars.outputs.version }} \
           --tag ${{ secrets.DOCKER_USERNAME }}/plexify:latest \
           --push .
+          echo "{markdown content}" >> $GITHUB_STEP_SUMMARY
 
       - name: Run Docker Image
         run: |
           docker run -d --name plexify ${{ secrets.DOCKER_USERNAME }}/plexify:${{ steps.incvars.outputs.version }}
+          echo "{markdown content}" >> $GITHUB_STEP_SUMMARY
 
       - name: Test Docker Image
         run: |
           docker exec plexify /bin/sh -c "echo \"I'm running...\""
+          echo "{markdown content}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Summary
+        run: |
+          echo "{markdown content}" >> $GITHUB_STEP_SUMMARY
