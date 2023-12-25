@@ -34,7 +34,7 @@ jobs:
         run: |
           docker run --rm --name test \
           -t test \
-          ${{ env.TEST_TAG }}
+          plexify:latest
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
