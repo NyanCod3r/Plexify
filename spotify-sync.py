@@ -16,7 +16,7 @@ import argparse
 
 # Parse command-line arguments
 parser = argparse.ArgumentParser()
-parser.add_argument('-t', '--test', help='Run in test mode')
+parser.add_argument('-m', '--test', help='Run in test mode')
 args = parser.parse_args()
 
 # If test mode is enabled, exit the script
