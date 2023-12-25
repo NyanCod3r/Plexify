@@ -34,7 +34,6 @@ jobs:
       - name: Test
         run: |
           docker run --rm --name test \
-          --test test \
           ${{ env.TEST_TAG }}
       - name: Build and push latest
         uses: docker/build-push-action@v5
