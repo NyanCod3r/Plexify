@@ -32,7 +32,7 @@ jobs:
           tags: ${{ env.TEST_TAG }}
       - name: Test
         run: |
-          docker run --rm \
+          docker run --rm --name test \
           -t test \
           ${{ env.TEST_TAG }}
       - name: Build and push
