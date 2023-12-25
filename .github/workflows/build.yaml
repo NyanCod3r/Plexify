@@ -34,11 +34,6 @@ jobs:
         run: |
           docker run --rm \
           -t test \
-          -e SPOTIFY_URIS=${{ secrets.SPOTIFY_URIS }} \
-          -e SECONDS_TO_WAIT=1800 \
-          -e PLEX_URL=${ secrets.PLEX_URL} \
-          -e PLEX_TOKEN={ secrets.PLEX_TOKEN } \
-          -e SPOTIPY_PATH=${ secrets.SPOTIPY_PATH } \
           plexify${{ env.TEST_TAG }}
       - name: Build and push
         uses: docker/build-push-action@v5
