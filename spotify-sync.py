@@ -229,4 +229,4 @@ try:
             runSync(plex, sp, spotifyMainUris)
             time.sleep(secondsToWait)
 except Exception as e:
-    logging.info(f"Are testing?: {str(e)}")
+    logging.info(f"Are you testing?: {str(e)}")
