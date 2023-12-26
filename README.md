@@ -1,5 +1,6 @@
-# Plexify - A Spotify to Plex Synchronization
+![](https://img.shields.io/docker/pulls/nyancod3r/plexify?logo=docker&link=https%3A%2F%2Fhub.docker.com%2Fr%2Fnyancod3r%2Fplexify) ![](https://img.shields.io/docker/stars/nyancod3r/plexify?logo=docker&link=https%3A%2F%2Fhub.docker.com%2Fr%2Fnyancod3r%2Fplexify)
 
+# Plexify - A Spotify to Plex Synchronization
 This application synchronizes your Spotify playlists with your Plex music library. It converts Spotify URIs to Plex playlists and updates them at a specified interval. Download missing tracks with spotdl.
 
 # Disclaimer
