@@ -27,6 +27,7 @@ To set up the application, you need to configure several environment variables:
 
 - `SPOTIPY_CLIENT_ID`: Your Spotify client ID. You can create one [here](https://developer.spotify.com/dashboard/login).
 - `SPOTIPY_CLIENT_SECRET`: The client secret of your Spotify client ID.
+- `SPOTIPY_PATH`: The path of your music archive. SpotDL will download the tracks to this location under a folder named as the Spotify playlist.
 - `PLEX_URL`: The URL of your Plex server, e.g., `http://plex:32400`.
 - `PLEX_TOKEN`: Your Plex token. You can find it by following [these instructions](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/).
 - `SPOTIFY_URIS`: A comma-separated list of the Spotify URIs you want to import. You can specify either a user's URI to import all public playlists owned by the user, or a playlist URI to import a specific public playlist. For example: `spotify:user:sonosplay,spotify:user:sonosplay:playlist:6nQjiSQhdf84s2AAxweRBv`.
