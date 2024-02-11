@@ -186,7 +186,7 @@ try:
     def runSync(plex : PlexServer, sp : spotipy.Spotify, spotifyURIs: []):
         logging.info('Starting a Sync Operation')
         playlists = []
-    
+
         for spotifyUriParts in spotifyURIs:
             if 'user' in spotifyUriParts.keys() and 'playlist' not in spotifyUriParts.keys():
                 logging.info('Getting playlists for %s' % spotifyUriParts['user'])
@@ -194,7 +194,6 @@ try:
             elif 'user' in spotifyUriParts.keys() and 'playlist' in spotifyUriParts.keys():
                 logging.info('Getting playlist from user %s playlist id %s' % (spotifyUriParts['user'], spotifyUriParts['playlist']))
                 playlists.append(getSpotifyPlaylist(sp, spotifyUriParts['user'], spotifyUriParts['playlist']))
-    
         for playlist in playlists:
             createPlaylist(plex, sp, playlist)
             playlistName = playlist['name']
@@ -206,13 +205,12 @@ try:
         spotifyUris = os.environ.get('SPOTIFY_URIS')
     
         if spotifyUris is None:
-            logging.error("No spotify uris")
+            logging.error("No spotify uris! We need at least one to work with")
     
         secondsToWait = int(os.environ.get('SECONDS_TO_WAIT', 1800))
         baseurl = os.environ.get('PLEX_URL')
         token = os.environ.get('PLEX_TOKEN')
         plex = PlexServer(baseurl, token)
-    
         client_credentials_manager = SpotifyClientCredentials()
         sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
     
@@ -229,4 +227,4 @@ try:
             runSync(plex, sp, spotifyMainUris)
             time.sleep(secondsToWait)
 except Exception as e:
-    logging.info(f"Are you testing?: {str(e)}")
+    logging.info(f"Something went really wrong! Please check: {str(e)}")
