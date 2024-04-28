@@ -81,9 +81,10 @@ try:
                         os.path.join(os.environ.get('SPOTIPY_PATH'), playlistName, '{artist} - {title}.{output-ext}'),
                         '--download', sp_uri
                     ]
-    
                     subprocess.run(command, check=True)
-                    downloaded_file = os.environ.get('SPOTIPY_PATH') + '/' + playlistName + '/' + track['artists'][0]['name'] + ' - ' + track['name'] + '.mp3'
+                    track_name = track['name'].title()
+                    artist_name = track['artists'][0]['name'].title()
+                    downloaded_file = os.environ.get('SPOTIPY_PATH') + '/' + playlistName + '/' + artist_name + ' - ' + track_name + '.mp3'
                     # If downloaded_file contains a question mark
                     if "?" in downloaded_file or ":" in downloaded_file:
                         downloaded_file = downloaded_file.replace("?", "")
@@ -101,9 +102,9 @@ try:
                         # If not, create a new ID3 tag
                         audiofile.initTag()
                     # Set the artist and title tags
-                    audiofile.tag.album_artist = track['artists'][0]['name']
-                    audiofile.tag.artist = track['artists'][0]['name']
-                    audiofile.tag.title = track['name']
+                    audiofile.tag.album_artist = artist_name
+                    audiofile.tag.artist = artist_name
+                    audiofile.tag.title = track_name
                     # Save the changes
                     audiofile.tag.save()
     
