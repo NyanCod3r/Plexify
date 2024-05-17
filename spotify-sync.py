@@ -59,10 +59,12 @@ try:
         plexTracks = []
         for spotifyTrack in spotifyTracks:
             track = spotifyTrack['track']
-            logging.info("Searching Plex for: %s by %s" % (track['name'], track['artists'][0]['name']))
+            track_name = track['name'].title()
+            artist_name = track['artists'][0]['name'].title()
+            logging.info("Searching Plex for: %s by %s" % (track_name, artist_name))
             try:
-                musicTracks = plex.search(track['name'], mediatype='track')
-                exact_track = next((t for t in musicTracks if t.title == track['name'] and t.grandparentTitle == track['artists'][0]['name']), None)
+                musicTracks = plex.search(track_name, mediatype='track')  # Use track_name here
+                exact_track = next((t for t in musicTracks if t.title == track_name and t.grandparentTitle == artist_name), None)  # Use track_name here
             except Exception as e:
                 logging.info(f"Issue making plex request: {str(e)}")
                 continue
