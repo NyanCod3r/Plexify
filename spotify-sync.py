@@ -210,7 +210,7 @@ try:
         if spotifyUris is None:
             logging.error("No spotify uris! We need at least one to work with")
     
-        secondsToWait = int(os.environ.get('SECONDS_TO_WAIT', 1800))
+        secondsToWait = int(os.environ.get('SECONDS_TO_WAIT', 3600))
         baseurl = os.environ.get('PLEX_URL')
         token = os.environ.get('PLEX_TOKEN')
         plex = PlexServer(baseurl, token)
