@@ -1,4 +1,4 @@
-FROM python:3.10.13-alpine
+FROM python:3.12.4-alpine3.19
 
 ENV SPOTIPY_CLIENT_ID ""
 ENV SPOTIPY_CLIENT_SECRET ""
