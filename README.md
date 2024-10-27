@@ -48,3 +48,11 @@ Please note that playlists will only be created on Plex for songs that exist in 
 ## Docker
 
 This application is available as a Docker image.
+
+## To Do
+[] Throttle API calls to avoid banning
+[] Add the possibility to create a Plex Playlist from "Liked Songs"
+[] Add auto-rating to 5 stars at playslist creation
+[] Add selection for folder hieranchy (follow Plex folder structure or create a personal)
+[] Add Beets to force metadata and folder hierarchy
+[] Create standalone UI for Windows,MacOS
