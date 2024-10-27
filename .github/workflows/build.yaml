@@ -1,14 +1,15 @@
 name: ci Plexify
 
 on:
-  push:
+  release:
+    types: [created]
     branches:
-      - "master"
+      - master
 
 env:
   TEST_TAG: nyancod3r/plexify:test
   LATEST_TAG: nyancod3r/plexify:latest
-  VERSION_TAG: nyancod3r/plexify:1.0.4
+  VERSION_TAG: nyancod3r/plexify:${{ github.event.release.tag_name }}
 
 jobs:
   docker:
@@ -40,7 +41,9 @@ jobs:
         run: |
           docker run --rm --name test \
           ${{ env.TEST_TAG }}
+
       - name: Build and push latest
+        if: success()
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -49,6 +52,7 @@ jobs:
           tags: ${{ env.LATEST_TAG }}
           
       - name: Build and push version
+        if: success()
         uses: docker/build-push-action@v5
         with:
           context: .

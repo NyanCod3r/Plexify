@@ -13,6 +13,24 @@ import spotdl
 import subprocess
 import argparse
 
+def retry_with_backoff(func, *args, **kwargs):
+    max_retries = 5
+    backoff = 1  # initial backoff time in seconds
+
+    for attempt in range(max_retries):
+        try:
+            return func(*args, **kwargs)
+        except spotipy.exceptions.SpotifyException as e:
+            if e.http_status == 429:
+                retry_after = int(e.headers.get("Retry-After", backoff))
+                time.sleep(retry_after)
+                backoff *= 2  # Exponential backoff
+            else:
+                raise e
+        except Exception as e:
+            raise e
+    raise Exception("Max retries exceeded")
+
 try:
     def filterPlexArray(plexItems=[], song="", artist="") -> List[Track]:
         plexItems = [
@@ -22,16 +40,13 @@ try:
             item.artist().title.lower() == artist.lower()
         ]
         return plexItems
-    
-    
+
     def getSpotifyPlaylist(sp: spotipy.client, userId: str, playlistId: str) -> []:
-        playlist = sp.user_playlist(userId, playlistId)
+        playlist = retry_with_backoff(sp.user_playlist, userId, playlistId)
         return playlist
-    
-    
-    # Returns a list of spotify playlist objects
+
     def getSpotifyUserPlaylists(sp: spotipy.client, userId: str) -> []:
-        playlists = sp.user_playlists(userId)
+        playlists = retry_with_backoff(sp.user_playlists, userId)
         spotifyPlaylists = []
         while playlists:
             playlistItems = playlists['items']
@@ -39,21 +54,19 @@ try:
                 if playlist['owner']['id'] == userId:
                     spotifyPlaylists.append(getSpotifyPlaylist(sp, userId, playlist['id']))
             if playlists['next']:
-                playlists = sp.next(playlists)
+                playlists = retry_with_backoff(sp.next, playlists)
             else:
                 playlists = None
         return spotifyPlaylists
-    
-    
+
     def getSpotifyTracks(sp: spotipy.client, playlist: []) -> []:
         spotifyTracks = []
         tracks = playlist['tracks']
         spotifyTracks.extend(tracks['items'])
         while tracks['next']:
-            tracks = sp.next(tracks)
+            tracks = retry_with_backoff(sp.next, tracks)
             spotifyTracks.extend(tracks['items'])
         return spotifyTracks
-    
     
     def getPlexTracks(plex: PlexServer, spotifyTracks: [], playlistName) -> List[Track]:
         plexTracks = []
