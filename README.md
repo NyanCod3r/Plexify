@@ -19,7 +19,7 @@ Users are responsible for ensuring that their use of this project complies with 
 - Downloads songs not found in Plex library for local storage and playback
 - Supports setting synchronization interval
   
-![](run_example.gif)
+![](files/run_example.gif)
 
 ## Setup
 
@@ -44,6 +44,11 @@ Playlists will only be created on Plex if your Plex instance has at least one of
 After setting up the environment variables, you can run the application. It will start synchronizing your Spotify playlists with your Plex library at the specified interval.
 
 Please note that playlists will only be created on Plex for songs that exist in your Plex library. If a song from a Spotify playlist is not found in your Plex library, the application will attempt to download it for local storage and playback.
+
+## Synchronization Process
+
+The following diagram illustrates how the synchronization process works:
+![](files/Graph.png)
 
 ## Docker
 
