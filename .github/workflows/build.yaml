@@ -36,6 +36,8 @@ jobs:
           context: .
           load: true
           tags: ${{ env.TEST_TAG }}
+          build-args: |
+            RELEASE_VERSION=${{ github.event.release.tag_name }}
 
       - name: Test
         run: |
@@ -50,6 +52,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ env.LATEST_TAG }}
+          build-args: |
+            RELEASE_VERSION=${{ github.event.release.tag_name }}
           
       - name: Build and push version
         if: success()
@@ -59,3 +63,5 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ env.VERSION_TAG }}
+          build-args: |
+            RELEASE_VERSION=${{ github.event.release.tag_name }}
