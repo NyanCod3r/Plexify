@@ -1,6 +1,9 @@
 name: ci Plexify
 
 on:
+  push:
+    branches:
+      - master
   release:
     types: [created]
     branches:
@@ -14,6 +17,9 @@ env:
 jobs:
   docker:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9, 3.10, 3.11, 3.12]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,9 +46,14 @@ jobs:
             RELEASE_VERSION=${{ github.event.release.tag_name }}
 
       - name: Test
+        if: github.event_name != 'release'
+        env:
+          SPOTIPY_CLIENT_ID: ${{ secrets.SPOTIPY_CLIENT_ID }}
+          SPOTIPY_CLIENT_SECRET: ${{ secrets.SPOTIPY_CLIENT_SECRET }}
         run: |
           docker run --rm --name test \
-          ${{ env.TEST_TAG }}
+          -e SPOTIPY_CLIENT_ID -e SPOTIPY_CLIENT_SECRET \
+          ${{ env.TEST_TAG }} python -m unittest discover -s tests
 
       - name: Build and push latest
         if: success()
@@ -56,7 +67,7 @@ jobs:
             RELEASE_VERSION=${{ github.event.release.tag_name }}
           
       - name: Build and push version
-        if: success()
+        if: github.event_name == 'release'
         uses: docker/build-push-action@v5
         with:
           context: .
