@@ -1,4 +1,5 @@
 import unittest
+import os
 from unittest.mock import patch, MagicMock
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
@@ -20,6 +21,12 @@ from plexapi.audio import Track
 
 class TestMainFunctions(unittest.TestCase):
     def setUp(self):
+        self.client_id = os.getenv('SPOTIPY_CLIENT_ID')
+        self.client_secret = os.getenv('SPOTIPY_CLIENT_SECRET')
+        
+        if not self.client_id or not self.client_secret:
+            self.fail("SPOTIPY_CLIENT_ID and SPOTIPY_CLIENT_SECRET must be set")
+
         self.sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
         self.plex = MagicMock(spec=PlexServer)
 

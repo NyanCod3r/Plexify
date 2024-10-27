@@ -53,7 +53,7 @@ jobs:
         run: |
           docker run --rm --name test \
           -e SPOTIPY_CLIENT_ID -e SPOTIPY_CLIENT_SECRET \
-          ${{ env.TEST_TAG }} python -m unittest discover -s tests
+          ${{ env.TEST_TAG }} python -m unittest discover -s tests -v
 
       - name: Build and push latest
         if: github.event_name == 'release'
