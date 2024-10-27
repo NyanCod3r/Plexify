@@ -28,7 +28,8 @@ def retry_with_backoff(func, *args, **kwargs):
             else:
                 raise e
         except Exception as e:
-            raise e
+            time.sleep(backoff)
+            backoff *= 2  # Exponential backoff
     raise Exception("Max retries exceeded")
 
 try:
