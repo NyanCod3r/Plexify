@@ -1,6 +1,5 @@
 import unittest
 import os
-from unittest.mock import patch, MagicMock
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from spotify_sync import (
@@ -17,7 +16,7 @@ from spotify_sync import (
     runSync
 )
 from plexapi.server import PlexServer
-from plexapi.audio import Track
+from unittest.mock import patch, MagicMock
 
 class TestMainFunctions(unittest.TestCase):
     def setUp(self):
@@ -27,8 +26,16 @@ class TestMainFunctions(unittest.TestCase):
         if not self.client_id or not self.client_secret:
             self.fail("SPOTIPY_CLIENT_ID and SPOTIPY_CLIENT_SECRET must be set")
 
-        self.sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
+        self.sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(
+            client_id=self.client_id,
+            client_secret=self.client_secret
+        ))
         self.plex = MagicMock(spec=PlexServer)
+        self.dummy_song = {
+            'name': 'SONG',
+            'artists': [{'name': 'ARTIST'}],
+            'external_urls': {'spotify': 'TRACKURL'}
+        }
 
     def test_retry_with_backoff(self):
         func = MagicMock(side_effect=[spotipy.exceptions.SpotifyException(429, "Rate limit exceeded"), "Success"])
@@ -36,26 +43,21 @@ class TestMainFunctions(unittest.TestCase):
         self.assertEqual(result, "Success")
         self.assertEqual(func.call_count, 2)
 
-    @patch('spotify_sync.retry_with_backoff')
-    def test_getSpotifyPlaylist(self, mock_retry):
-        mock_retry.return_value = {'name': 'Test Playlist'}
-        result = getSpotifyPlaylist(self.sp, 'user_id', 'playlist_id')
-        self.assertEqual(result['name'], 'Test Playlist')
+    def test_getSpotifyPlaylist(self):
+        result = getSpotifyPlaylist(self.sp, 'spotify', '37i9dQZF1DXcBWIGoYBM5M')  # Example playlist ID
+        self.assertIsNotNone(result)
+        self.assertIn('name', result)
 
-    @patch('spotify_sync.retry_with_backoff')
-    def test_getSpotifyUserPlaylists(self, mock_retry):
-        mock_retry.return_value = {'items': [{'owner': {'id': 'user_id'}, 'id': 'playlist_id'}], 'next': None}
-        result = getSpotifyUserPlaylists(self.sp, 'user_id')
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]['id'], 'playlist_id')
+    def test_getSpotifyUserPlaylists(self):
+        result = getSpotifyUserPlaylists(self.sp, 'spotify')
+        self.assertIsNotNone(result)
+        self.assertGreater(len(result), 0)
 
-    @patch('spotify_sync.retry_with_backoff')
-    def test_getSpotifyTracks(self, mock_retry):
-        mock_retry.return_value = {'items': [{'track': {'name': 'Test Track'}}], 'next': None}
-        playlist = {'tracks': {'items': [{'track': {'name': 'Test Track'}}], 'next': None}}
+    def test_getSpotifyTracks(self):
+        playlist = getSpotifyPlaylist(self.sp, 'spotify', '37i9dQZF1DXcBWIGoYBM5M')  # Example playlist ID
         result = getSpotifyTracks(self.sp, playlist)
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]['track']['name'], 'Test Track')
+        self.assertIsNotNone(result)
+        self.assertGreater(len(result), 0)
 
     @patch('spotify_sync.filterPlexArray')
     @patch('spotify_sync.createFolder')
@@ -64,7 +66,7 @@ class TestMainFunctions(unittest.TestCase):
     def test_getPlexTracks(self, mock_eyed3, mock_subprocess, mock_createFolder, mock_filterPlexArray):
         mock_filterPlexArray.return_value = [MagicMock(spec=Track)]
         mock_eyed3.return_value = MagicMock()
-        spotifyTracks = [{'track': {'name': 'Test Track', 'artists': [{'name': 'Test Artist'}], 'external_urls': {'spotify': 'spotify:track:123'}}}]
+        spotifyTracks = [{'track': self.dummy_song}]
         result = getPlexTracks(self.plex, spotifyTracks, 'Test Playlist')
         self.assertEqual(len(result), 1)
 
