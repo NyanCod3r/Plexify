@@ -2,4 +2,4 @@ PlexApi==4.15.6
 spotipy==2.23.0
 eyed3==0.9.7
 spotdl==4.2.4
-pytests==6.2.4
+pytests
