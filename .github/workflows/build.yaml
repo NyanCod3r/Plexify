@@ -56,7 +56,7 @@ jobs:
           ${{ env.TEST_TAG }} python -m unittest discover -s tests -v
 
       - name: Build and push latest
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' && github.event.release.prerelease == false
         uses: docker/build-push-action@v5
         with:
           context: .
