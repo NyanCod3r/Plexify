@@ -1,6 +1,6 @@
 PlexApi==4.15.6
-spotipy==2.24.0
+spotipy==2.25.1
 eyed3==0.9.7
-spotdl==4.2.8
-pytest==6.2.4
-factory_boy==3.2.0
+spotdl==4.2.11
+pytest==8.3.5
+factory_boy==3.3.3
