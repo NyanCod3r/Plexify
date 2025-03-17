@@ -3,7 +3,7 @@ name: ci Plexify
 on:
   push:
     branches:
-      - master
+      - '*'
   release:
     types: [created]
     branches:
@@ -37,6 +37,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and export to Docker
+        if: github.ref != 'refs/heads/main'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -46,7 +47,7 @@ jobs:
             RELEASE_VERSION=${{ github.event.release.tag_name }}
 
       - name: Test
-        if: github.event_name != 'release'
+        if: github.event_name != 'release' && github.ref != 'refs/heads/main'
         env:
           SPOTIPY_CLIENT_ID: ${{ secrets.SPOTIPY_CLIENT_ID }}
           SPOTIPY_CLIENT_SECRET: ${{ secrets.SPOTIPY_CLIENT_SECRET }}
