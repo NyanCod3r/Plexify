@@ -40,7 +40,7 @@ jobs:
         if: github.ref != 'refs/heads/main'
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./src
           load: true
           tags: ${{ env.TEST_TAG }}
           build-args: |
@@ -60,7 +60,7 @@ jobs:
         if: github.event_name == 'release' && github.event.release.prerelease == false
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./src
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ env.LATEST_TAG }}
@@ -71,7 +71,7 @@ jobs:
         if: github.event_name == 'release'
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./src
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ env.VERSION_TAG }}
