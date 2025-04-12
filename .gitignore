@@ -4,4 +4,8 @@ venv
 Plexify/
 Pipfile*
 VERSION
+*.json
+*pycache*
+*.bak
+
 
