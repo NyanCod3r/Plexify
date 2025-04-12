@@ -32,6 +32,7 @@ To set up the application, you need to configure several environment variables:
 - `PLEX_TOKEN`: Your Plex token. You can find it by following [these instructions](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/).
 - `SPOTIFY_URIS`: A comma-separated list of the Spotify URIs you want to import. You can specify either a user's URI to import all public playlists owned by the user, or a playlist URI to import a specific public playlist. For example: `spotify:user:sonosplay,spotify:user:sonosplay:playlist:6nQjiSQhdf84s2AAxweRBv`.
 - `SECONDS_TO_WAIT`: The number of seconds to wait between synchronizations.
+- `PLEXIFY_DEBUG` : 0 Info 1 Verbose
 
 The following URI's are supported:
 * A user's URI which will import all public playlists a user owns: `spotify:user:sonosplay`
