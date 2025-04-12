@@ -42,7 +42,7 @@ def dumpSpotifyPlaylists(sp: spotipy.Spotify, spotifyURIs: [], dumpFile: str):
     # Save playlists to a JSON file
     with open(dumpFile, 'w') as f:
         json.dump(playlists, f)
-    logging.info(f"Dumped Spotify playlists to {dumpFile}")
+    logging.debug(f"Dumped Spotify playlists to {dumpFile}")
 
 # Dump Plex playlists to a JSON file
 def dumpPlexPlaylists(plex: PlexServer, dumpFile: str):
@@ -57,7 +57,7 @@ def dumpPlexPlaylists(plex: PlexServer, dumpFile: str):
     # Save playlists to a JSON file
     with open(dumpFile, 'w') as f:
         json.dump(plexPlaylists, f)
-    logging.info(f"Dumped Plex playlists to {dumpFile}")
+    logging.debug(f"Dumped Plex playlists to {dumpFile}")
 
 # Compare Spotify and Plex playlists and sync them
 def diffAndSyncPlaylists(plex: PlexServer, sp: spotipy.Spotify, spotifyDumpFile: str, plexDumpFile: str):
@@ -83,14 +83,14 @@ def diffAndSyncPlaylists(plex: PlexServer, sp: spotipy.Spotify, spotifyDumpFile:
             
             # Add missing tracks to Plex
             if tracksToAdd:
-                logging.info(f"Adding tracks to Plex playlist {playlistName}: {tracksToAdd}")
+                logging.debug(f"Adding tracks to Plex playlist {playlistName}: {tracksToAdd}")
                 createPlaylist(plex, sp, spotifyPlaylist)
             
             # Skip track deletion logic
-            logging.info(f"Skipping track deletion for Plex playlist {playlistName}")
+            logging.debug(f"Skipping track deletion for Plex playlist {playlistName}")
         else:
             # Create a new Plex playlist if it doesn't exist
-            logging.info(f"Creating new Plex playlist {playlistName}")
+            logging.debug(f"Creating new Plex playlist {playlistName}")
             createPlaylist(plex, sp, spotifyPlaylist)
 
 # Main function to run the sync operation

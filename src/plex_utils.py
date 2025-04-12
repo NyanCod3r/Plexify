@@ -21,24 +21,24 @@ def getPlexTracks(plex: PlexServer, spotifyTracks: [], playlistName) -> List[Tra
         track = spotifyTrack['track']
         track_name = track['name'].title()
         artist_name = track['artists'][0]['name'].title()
-        logging.info("Searching Plex for: %s by %s" % (track_name, artist_name))
+        logging.debug("Searching Plex for: %s by %s" % (track_name, artist_name))
         try:
             # Search for tracks in Plex that match the track name
             musicTracks = plex.search(track_name, mediatype='track')
             # Find the exact track that matches both the track name and artist name
             exact_track = next((t for t in musicTracks if t.title == track_name and t.grandparentTitle == artist_name), None)
         except Exception as e:
-            logging.info(f"Issue making plex request: {str(e)}")
+            logging.debug(f"Issue making plex request: {str(e)}")
             continue
         if exact_track is not None:
             # Filter the tracks and add the exact match to the plexTracks list
             plexMusic = filterPlexArray(musicTracks, track['name'], track['artists'][0]['name'])
             if len(plexMusic) > 0:
-                logging.info("Found Plex Song: %s by %s" % (track['name'], track['artists'][0]['name']))
+                logging.debug("Found Plex Song: %s by %s" % (track['name'], track['artists'][0]['name']))
                 plexTracks.append(plexMusic[0])
         else:
             # Download the track from Spotify if no exact match is found
-            logging.info("Could not find song in Plex Library: %s by %s , downloading" % (track['name'], track['artists'][0]['name']))
+            logging.debug("Could not find song in Plex Library: %s by %s , downloading" % (track['name'], track['artists'][0]['name']))
             sp_uri = track['external_urls']['spotify']
             createFolder(playlistName)
             try:
@@ -71,7 +71,7 @@ def getPlexTracks(plex: PlexServer, spotifyTracks: [], playlistName) -> List[Tra
                 audiofile.tag.title = track_name
                 audiofile.tag.save()
             except Exception as e:
-                logging.info(f"Issue downloading song or no song found. Error: {str(e)}")
+                logging.debug(f"Issue downloading song or no song found. Error: {str(e)}")
                 continue
     return plexTracks
 
@@ -124,4 +124,4 @@ def delete_unmatched_files(plex: PlexServer, spotifyTracks: [], playlistName: st
                 plex_playlist.removeItems(track)
                 track.delete()
     except Exception as e:
-        logging.info(f"Issue deleting tracks from playlist: {str(e)}")
+        logging.debug(f"Issue deleting tracks from playlist: {str(e)}")

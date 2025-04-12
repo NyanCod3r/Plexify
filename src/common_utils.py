@@ -25,9 +25,9 @@ def filterPlexArray(plexItems=[], song="", artist="") -> List[Track]:
 def createFolder(playlistName):
     if not os.path.exists(os.environ.get('SPOTIPY_PATH') + '/' + playlistName):
         os.makedirs(os.environ.get('SPOTIPY_PATH') + '/' + playlistName)
-        logging.info('Created folder %s' % playlistName)
+        logging.debug('Created folder %s' % playlistName)
     else:
-        logging.info('Folder %s already exists' % playlistName)
+        logging.debug('Folder %s already exists' % playlistName)
 
 # Retries a function with exponential backoff in case of failures
 # - func: The function to retry
