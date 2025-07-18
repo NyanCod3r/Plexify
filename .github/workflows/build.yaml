@@ -9,13 +9,23 @@ on:
     branches:
       - master
 
-env:
-  TEST_TAG: nyancod3r/plexify:test
-  LATEST_TAG: nyancod3r/plexify:latest
-  VERSION_TAG: nyancod3r/plexify:${{ github.event.release.tag_name }}
-
 jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Release Please (semantic versioning & release notes)
+        id: release
+        uses: google-github-actions/release-please-action@v4
+        with:
+          release-type: simple
+          package-name: plexify
+
   docker:
+    needs: release
+    if: needs.release.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -36,44 +46,23 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and export to Docker
-        if: github.ref != 'refs/heads/main'
+      - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./src
-          load: true
-          tags: ${{ env.TEST_TAG }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            nyancod3r/plexify:latest
+            nyancod3r/plexify:${{ needs.release.outputs.major }}.${{ needs.release.outputs.minor }}.${{ needs.release.outputs.patch }}
           build-args: |
-            RELEASE_VERSION=${{ github.event.release.tag_name }}
+            RELEASE_VERSION=${{ needs.release.outputs.tag_name }}
 
       - name: Test
-        if: github.event_name != 'release' && github.ref != 'refs/heads/main'
         env:
           SPOTIPY_CLIENT_ID: ${{ secrets.SPOTIPY_CLIENT_ID }}
           SPOTIPY_CLIENT_SECRET: ${{ secrets.SPOTIPY_CLIENT_SECRET }}
         run: |
           docker run --rm --name test \
           -e SPOTIPY_CLIENT_ID -e SPOTIPY_CLIENT_SECRET \
-          ${{ env.TEST_TAG }} python -m unittest discover -s tests -v
-
-      - name: Build and push latest
-        if: github.event_name == 'release' && github.event.release.prerelease == false
-        uses: docker/build-push-action@v5
-        with:
-          context: ./src
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ env.LATEST_TAG }}
-          build-args: |
-            RELEASE_VERSION=${{ github.event.release.tag_name }}
-          
-      - name: Build and push version
-        if: github.event_name == 'release'
-        uses: docker/build-push-action@v5
-        with:
-          context: ./src
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ env.VERSION_TAG }}
-          build-args: |
-            RELEASE_VERSION=${{ github.event.release.tag_name }}
+          nyancod3r/plexify:latest python -m unittest discover -s tests -v
