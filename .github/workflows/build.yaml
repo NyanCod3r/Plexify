@@ -23,8 +23,7 @@ jobs:
           release-type: simple
 
   docker:
-    needs: release
-    if: needs.release.outputs.release_created == 'true'
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -53,9 +52,9 @@ jobs:
           push: true
           tags: |
             nyancod3r/plexify:latest
-            nyancod3r/plexify:${{ needs.release.outputs.major }}.${{ needs.release.outputs.minor }}.${{ needs.release.outputs.patch }}
+            nyancod3r/plexify:${{ github.event.release.tag_name }}
           build-args: |
-            RELEASE_VERSION=${{ needs.release.outputs.tag_name }}
+            RELEASE_VERSION=${{ github.event.release.tag_name }}
 
       - name: Test
         env:
@@ -64,4 +63,4 @@ jobs:
         run: |
           docker run --rm --name test \
           -e SPOTIPY_CLIENT_ID -e SPOTIPY_CLIENT_SECRET \
-          nyancod3r/plexify:latest python -m unittest discover -s tests -v
+          nyancod3r/plexify:${{ github.event.release.tag_name }} python -m unittest discover -s tests -v
