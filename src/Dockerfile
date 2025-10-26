@@ -11,14 +11,14 @@ ENV SPOTIFY_URIS ""
 ENV MUSIC_PATH ""
 ENV SECONDS_TO_WAIT 3600
 
-WORKDIR /app/
+WORKDIR /app
 
-# Copy all Python files from the src folder into the container
-COPY ./src /app/
+# Copy all project files into the container
+COPY . .
 
 # Install dependencies
 RUN apk add --no-cache ffmpeg
-RUN pip install -r /app/requirements.txt
+RUN pip install -r /app/src/requirements.txt
 
 # Print ASCII art with release version
 RUN echo "██████╗ ██╗     ███████╗██╗  ██╗ ██╗ ███████╗██╗   ██╗" > /ascii_art.txt && \
@@ -30,4 +30,4 @@ RUN echo "██████╗ ██╗     ███████╗██╗ 
     echo "Release Version: ${RELEASE_VERSION}" >> /ascii_art.txt
 
 # Run the main script
-CMD ["sh", "-c", "cat /ascii_art.txt && python /app/main.py"]
+CMD ["sh", "-c", "cat /ascii_art.txt && python /app/src/main.py"]
