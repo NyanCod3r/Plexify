@@ -69,9 +69,9 @@ class TestMainFunctions(unittest.TestCase):
     @patch('plex_utils.subprocess.run')
     @patch('plex_utils.eyed3.load')
     def test_getPlexTracks(self, mock_eyed3, mock_subprocess, mock_createFolder, mock_filterPlexArray):
-        mock_track = MagicMock(spec=Track, title='SONG', grandparentTitle='ARTIST')
+        mock_track = MagicMock(spec=Track, title='Song', grandparentTitle='Artist')
         mock_filterPlexArray.return_value = [mock_track]
-        self.plex.library.search.return_value = [mock_track]
+        self.plex.search.return_value = [mock_track]
         spotifyTracks = [{'track': self.dummy_song}]
         result = getPlexTracks(self.plex, spotifyTracks, 'Test Playlist')
         self.assertEqual(len(result), 1)
