@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - master
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'The version to release (e.g., 1.1.1)'
+        required: true
 
 jobs:
   release:
@@ -20,6 +25,8 @@ jobs:
         uses: googleapis/release-please-action@v4
         with:
           release-type: python
+          command: ${{ github.event_name == 'workflow_dispatch' && 'release' || 'release-pr' }}
+          version: ${{ github.event.inputs.version }}
 
   docker:
     needs: release
