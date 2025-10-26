@@ -64,4 +64,5 @@ jobs:
         run: |
           docker run --rm --name test \
           -e SPOTIFY_CLIENT_ID -e SPOTIFY_CLIENT_SECRET \
+          -e PYTHONPATH=/app \
           nyancod3r/plexify:${{ needs.release.outputs.tag_name }} python -m unittest discover -s tests -v
