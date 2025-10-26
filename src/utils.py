@@ -1,7 +1,9 @@
 """
 utils.py - Core synchronization logic for Plexify
 
-This module contains the main functions that drive the synchronization process between Spotify and Plex. It orchestrates the fetching of playlists, comparison, and creation of playlists in Plex.
+This module contains the main functions that drive the synchronization process
+between Spotify and Plex. It orchestrates the fetching of playlists by user URI
+or by name, and then creates or updates the corresponding playlists in Plex.
 
 Key functions:
 - runSync: Main entry point to start the synchronization.
@@ -15,8 +17,8 @@ import json
 import logging
 from plexapi.server import PlexServer
 import spotipy
-from spotify_utils import getSpotifyUserPlaylists, getSpotifyTracks
-from plex_utils import getPlexPlaylists, createPlaylist, delete_unmatched_files
+from spotify_utils import getSpotifyUserPlaylists, findPlaylistsByName
+from plex_utils import getPlexPlaylists, createPlaylist
 
 # Main function to run the synchronization process
 # - plex: The Plex server instance
@@ -38,6 +40,12 @@ def dumpSpotifyPlaylists(sp: spotipy.client, spotify_uris: []) -> []:
     spotifyPlaylists = []
     for uri in spotify_uris:
         spotifyPlaylists.extend(getSpotifyUserPlaylists(sp, uri['user']))
+
+    playlist_names_str = os.environ.get('SPOTIFY_PLAYLIST_NAMES', '')
+    if playlist_names_str:
+        playlist_names = [name.strip() for name in playlist_names_str.split(',')]
+        spotifyPlaylists.extend(findPlaylistsByName(sp, playlist_names))
+
     with open('spotify_playlists.json', 'w') as f:
         json.dump(spotifyPlaylists, f, indent=4)
     logging.info(f"Successfully dumped {len(spotifyPlaylists)} Spotify playlists.")

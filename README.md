@@ -5,7 +5,7 @@ Plexify synchronizes your Spotify playlists to your Plex server. It fetches spec
 ## How it works
 
 1.  **Connects to Plex and Spotify**: The application uses your provided credentials to connect to both services.
-2.  **Fetches Spotify Playlists**: It retrieves all playlists for the user(s) specified in the `SPOTIFY_URIS` environment variable.
+2.  **Fetches Spotify Playlists**: It retrieves playlists based on the `SPOTIFY_URIS` and `SPOTIFY_PLAYLIST_NAMES` environment variables.
 3.  **Searches for Tracks in Plex**: For each track in a Spotify playlist, Plexify searches your Plex library to find a match based on the track title and artist.
 4.  **Creates/Updates Plex Playlists**:
     *   If a corresponding playlist does not exist in Plex, it will be created.
@@ -15,18 +15,19 @@ Plexify synchronizes your Spotify playlists to your Plex server. It fetches spec
 
 ## Configuration
 
-The application is configured using environment variables.
+The application is configured using environment variables. You must provide at least one of `SPOTIFY_URIS` or `SPOTIFY_PLAYLIST_NAMES`.
 
-| Variable              | Description                                                                                             | Example                                                              |
-| --------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| `SPOTIPY_CLIENT_ID`   | Your Spotify application client ID.                                                                     | `your_spotify_client_id`                                             |
-| `SPOTIPY_CLIENT_SECRET` | Your Spotify application client secret.                                                                 | `your_spotify_client_secret`                                         |
-| `PLEX_URL`            | The base URL of your Plex server.                                                                       | `http://192.168.1.100:32400`                                         |
-| `PLEX_TOKEN`          | Your Plex authentication token.                                                                         | `your_plex_token`                                                    |
-| `SPOTIFY_URIS`        | A comma-separated list of Spotify URIs for the users whose playlists you want to sync.                    | `spotify:user:user1,spotify:user:user2`                              |
-| `MUSIC_PATH`          | The path to your music library, used for organizing downloaded files (if downloading is implemented).   | `/music`                                                             |
-| `SECONDS_TO_WAIT`     | The number of seconds to wait between synchronization cycles.                                           | `3600` (for 1 hour)                                                  |
-| `LOG_LEVEL`           | The logging level for the application.                                                                  | `INFO` or `DEBUG`                                                    |
+| Variable                  | Description                                                                                             | Example                                                              |
+| ------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `SPOTIPY_CLIENT_ID`       | Your Spotify application client ID.                                                                     | `your_spotify_client_id`                                             |
+| `SPOTIPY_CLIENT_SECRET`   | Your Spotify application client secret.                                                                 | `your_spotify_client_secret`                                         |
+| `PLEX_URL`                | The base URL of your Plex server.                                                                       | `http://192.168.1.100:32400`                                         |
+| `PLEX_TOKEN`              | Your Plex authentication token.                                                                         | `your_plex_token`                                                    |
+| `SPOTIFY_URIS`            | A comma-separated list of Spotify URIs for the users whose playlists you want to sync.                    | `spotify:user:user1,spotify:user:user2`                              |
+| `SPOTIFY_PLAYLIST_NAMES`  | A comma-separated list of exact playlist names to sync (e.g., Discover Weekly).                         | `Discover Weekly,Release Radar`                                      |
+| `MUSIC_PATH`              | The path to your music library, used for organizing downloaded files (if downloading is implemented).   | `/music`                                                             |
+| `SECONDS_TO_WAIT`         | The number of seconds to wait between synchronization cycles.                                           | `3600` (for 1 hour)                                                  |
+| `LOG_LEVEL`               | The logging level for the application.                                                                  | `INFO` or `DEBUG`                                                    |
 
 ## Usage
 
@@ -39,6 +40,6 @@ docker run -d \
   -e SPOTIPY_CLIENT_SECRET="your_spotify_client_secret" \
   -e PLEX_URL="http://your_plex_url:32400" \
   -e PLEX_TOKEN="your_plex_token" \
-  -e SPOTIFY_URIS="spotify:user:your_spotify_username" \
+  -e SPOTIFY_PLAYLIST_NAMES="Discover Weekly,Release Radar" \
   -e LOG_LEVEL="INFO" \
   nyancod3r/plexify:latest
