@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/NyanCod3r/Plexify/compare/v1.1.0...v1.1.1) (2025-10-26)
+
+
+### Bug Fixes
+
+* **ci:** Fix docker build context and test paths ([d11967f](https://github.com/NyanCod3r/Plexify/commit/d11967f1aeece4a24df4aee4b9bda18f4ec52a49))
+
 ## [1.1.0](https://github.com/NyanCod3r/Plexify/compare/v1.1.0...v1.1.0) (2025-10-26)
 
 
