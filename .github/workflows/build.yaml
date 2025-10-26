@@ -54,87 +54,12 @@ jobs:
 
       - name: Test 
         env:
-          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
-          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIF          name: ci Plexify
-          
-          on:
-            push:
-              branches:
-                - master
-          
-          jobs:
-            release:
-              runs-on: ubuntu-latest
-              outputs:
-                release_created: ${{ steps.release.outputs.release_created }}
-                tag_name: ${{ steps.release.outputs.tag_name }}
-              steps:
-                - name: Checkout
-                  uses: actions/checkout@v4
-          
-                - name: Release Please (semantic versioning & release notes)
-                  id: release
-                  uses: googleapis/release-please-action@v4
-                  with:
-                    release-type: python
-          
-            docker:
-              needs: release
-              if: ${{ needs.release.outputs.release_created == 'true' }}
-              runs-on: ubuntu-latest
-              strategy:
-                matrix:
-                  python-version: [3.11, 3.12, 3.13]
-              steps:
-                - name: Checkout
-                  uses: actions/checkout@v4
-          
-                - name: Set up QEMU
-                  uses: docker/setup-qemu-action@v3
-          
-                - name: Set up Docker Buildx
-                  uses: docker/setup-buildx-action@v3
-          
-                - name: Login to Docker Hub
-                  uses: docker/login-action@v3
-                  with:
-                    username: ${{ secrets.DOCKERHUB_USERNAME }}
-                    password: ${{ secrets.DOCKERHUB_TOKEN }}
-          
-                - name: Build Docker image
-                  uses: docker/build-push-action@v5
-                  with:
-                    context: .
-                    file: ./src/Dockerfile
-                    load: true
-                    tags: nyancod3r/plexify:${{ needs.release.outputs.tag_name }}
-          
-                - name: Test 
-                  env:
-                    SPOTIPY_CLIENT_ID: ${{ secrets.SPOTIPY_CLIENT_ID }}
-                    SPOTIPY_CLIENT_SECRET: ${{ secrets.SPOTIPY_CLIENT_SECRET }}
-                  run: |
-                    docker run --rm --name test \
-                    -e SPOTIPY_CLIENT_ID \
-                    -e SPOTIPY_CLIENT_SECRET \
-                    -e PYTHONPATH=/app \
-                    nyancod3r/plexify:${{ needs.release.outputs.tag_name }} python -m unittest discover -s tests -v
-                
-                - name: Push Docker image
-                  uses: docker/build-push-action@v5
-                  with:
-                    context: .
-                    file: ./src/Dockerfile
-                    platforms: linux/amd64,linux/arm64
-                    push: true
-                    tags: |
-                      nyancod3r/plexify:latest
-                      nyancod3r/plexify:${{ needs.release.outputs.tag_name }}
-                    build-args: |
-                      RELEASE_VERSION=${{ needs.release.outputs.tag_name }}Y_CLIENT_SECRET }}
+          SPOTIPY_CLIENT_ID: ${{ secrets.SPOTIPY_CLIENT_ID }}
+          SPOTIPY_CLIENT_SECRET: ${{ secrets.SPOTIPY_CLIENT_SECRET }}
         run: |
           docker run --rm --name test \
-          -e SPOTIFY_CLIENT_ID -e SPOTIFY_CLIENT_SECRET \
+          -e SPOTIPY_CLIENT_ID \
+          -e SPOTIPY_CLIENT_SECRET \
           -e PYTHONPATH=/app \
           nyancod3r/plexify:${{ needs.release.outputs.tag_name }} python -m unittest discover -s tests -v
       
