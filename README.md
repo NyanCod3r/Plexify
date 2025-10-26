@@ -25,8 +25,8 @@ Users are responsible for ensuring that their use of this project complies with 
 
 To set up the application, you need to configure several environment variables:
 
-- `SPOTIFY_CLIENT_ID`: Your Spotify client ID. You can create one [here](https://developer.spotify.com/dashboard/login).
-- `SPOTIFY_CLIENT_SECRET`: The client secret of your Spotify client ID.
+- `SPOTIPY_CLIENT_ID`: Your Spotify client ID. You can create one [here](https://developer.spotify.com/dashboard/login).
+- `SPOTIPY_CLIENT_SECRET`: The client secret of your Spotify client ID.
 - `MUSIC_PATH`: The path of your music archive. SpotDL will download the tracks to this location under a folder named as the Spotify playlist.
 - `PLEX_URL`: The URL of your Plex server, e.g., `http://plex:32400`.
 - `PLEX_TOKEN`: Your Plex token. You can find it by following [these instructions](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/).
