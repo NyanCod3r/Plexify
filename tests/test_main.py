@@ -33,7 +33,7 @@ class TestMainFunctions(unittest.TestCase):
         }
 
     def test_retry_with_backoff(self):
-        func = MagicMock(side_effect=[spotipy.exceptions.SpotifyException(429, "Rate limit exceeded", headers={}), "Success"])
+        func = MagicMock(side_effect=[spotipy.exceptions.SpotifyException(429, -1, "Rate limit exceeded", headers={}), "Success"])
         result = retry_with_backoff(func)
         self.assertEqual(result, "Success")
         self.assertEqual(func.call_count, 2)
@@ -49,7 +49,7 @@ class TestMainFunctions(unittest.TestCase):
     def test_getSpotifyUserPlaylists(self):
         with patch('spotify_utils.retry_with_backoff') as mock_retry:
             mock_retry.side_effect = [
-                {'items': [{'owner': {'id': 'spotify'}, 'id': 'playlist1'}], 'next': None},
+                {'items': [{'owner': {'id': 'spotify'}, 'id': 'playlist1', 'name': 'Playlist 1'}], 'next': None},
                 {'name': 'Playlist 1', 'tracks': {'items': [], 'next': None}}
             ]
             result = getSpotifyUserPlaylists(self.sp, 'spotify')
@@ -57,7 +57,7 @@ class TestMainFunctions(unittest.TestCase):
             self.assertEqual(len(result), 1)
 
     def test_getSpotifyTracks(self):
-        playlist = {'name': 'Test Playlist', 'tracks': {'items': [self.dummy_song], 'next': None}}
+        playlist = {'name': 'Test Playlist', 'tracks': {'items': [{'track': self.dummy_song}], 'next': None}}
         with patch('spotify_utils.retry_with_backoff') as mock_retry:
             result = getSpotifyTracks(self.sp, playlist)
             self.assertIsNotNone(result)
@@ -70,7 +70,7 @@ class TestMainFunctions(unittest.TestCase):
     @patch('plex_utils.eyed3.load')
     def test_getPlexTracks(self, mock_eyed3, mock_subprocess, mock_createFolder, mock_filterPlexArray):
         mock_filterPlexArray.return_value = [MagicMock(spec=Track)]
-        self.plex.search.return_value = [MagicMock(spec=Track, title='SONG', grandparentTitle='ARTIST')]
+        self.plex.library.search.return_value = [MagicMock(spec=Track, title='SONG', grandparentTitle='ARTIST')]
         spotifyTracks = [{'track': self.dummy_song}]
         result = getPlexTracks(self.plex, spotifyTracks, 'Test Playlist')
         self.assertEqual(len(result), 1)
