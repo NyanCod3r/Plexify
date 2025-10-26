@@ -44,7 +44,25 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./src/Dockerfile
+          load: true
+          tags: nyancod3r/plexify:${{ needs.release.outputs.tag_name }}
+
+      - name: Test 
+        env:
+          SPOTIPY_CLIENT_ID: ${{ secrets.SPOTIPY_CLIENT_ID }}
+          SPOTIPY_CLIENT_SECRET: ${{ secrets.SPOTIPY_CLIENT_SECRET }}
+        run: |
+          docker run --rm --name test \
+          -e SPOTIFY_CLIENT_ID -e SPOTIFY_CLIENT_SECRET \
+          -e PYTHONPATH=/app \
+          nyancod3r/plexify:${{ needs.release.outputs.tag_name }} python -m unittest discover -s tests -v
+      
+      - name: Push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -56,13 +74,3 @@ jobs:
             nyancod3r/plexify:${{ needs.release.outputs.tag_name }}
           build-args: |
             RELEASE_VERSION=${{ needs.release.outputs.tag_name }}
-
-      - name: Test 
-        env:
-          SPOTIPY_CLIENT_ID: ${{ secrets.SPOTIPY_CLIENT_ID }}
-          SPOTIPY_CLIENT_SECRET: ${{ secrets.SPOTIPY_CLIENT_SECRET }}
-        run: |
-          docker run --rm --name test \
-          -e SPOTIFY_CLIENT_ID -e SPOTIFY_CLIENT_SECRET \
-          -e PYTHONPATH=/app \
-          nyancod3r/plexify:${{ needs.release.outputs.tag_name }} python -m unittest discover -s tests -v

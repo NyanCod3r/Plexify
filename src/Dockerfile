@@ -3,18 +3,18 @@ FROM python:3.12.4-alpine3.19
 ARG RELEASE_VERSION
 ENV RELEASE_VERSION=${RELEASE_VERSION}
 
-ENV SPOTIPY_CLIENT_ID ""
-ENV SPOTIPY_CLIENT_SECRET ""
+ENV SPOTIFY_CLIENT_ID ""
+ENV SPOTIFY_CLIENT_SECRET ""
 ENV PLEX_URL ""
 ENV PLEX_TOKEN ""
 ENV SPOTIFY_URIS ""
-ENV SPOTIPY_PATH ""
+ENV MUSIC_PATH ""
 ENV SECONDS_TO_WAIT 3600
 
 WORKDIR /app/
 
 # Copy all Python files from the src folder into the container
-COPY . /app/
+COPY ./src /app/
 
 # Install dependencies
 RUN apk add --no-cache ffmpeg
