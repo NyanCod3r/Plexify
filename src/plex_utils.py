@@ -60,6 +60,9 @@ def getPlexTracks(plex: PlexServer, spotifyTracks: [], playlistName) -> List[Tra
                 continue
     return plexTracks
 
+def getPlexPlaylists(plex: PlexServer) -> List:
+    return plex.playlists()
+
 def createPlaylist(plex: PlexServer, sp: spotipy.Spotify, playlist: []):
     playlistName = playlist['name']
     logging.info('Starting playlist %s' % playlistName)
