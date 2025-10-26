@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.2-beta](https://github.com/NyanCod3r/Plexify/compare/v1.3.1-beta...v1.3.2-beta) (2025-10-26)
+
+
+### Bug Fixes
+
+* **ci:** Specify correct Dockerfile path in build workflow ([520d177](https://github.com/NyanCod3r/Plexify/commit/520d1771a77944ad33fa7311758e52f02cb4a515))
+
 ## [1.3.1-beta](https://github.com/NyanCod3r/Plexify/compare/v1.3.0-beta...v1.3.1-beta) (2025-10-26)
 
 
