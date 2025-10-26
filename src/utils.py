@@ -1,8 +1,23 @@
+"""
+utils.py - Core utilities for Plexify
+
+This module provides core utilities for syncing Spotify playlists to Plex, including:
+- retry_with_backoff: Retry logic for API calls
+- dumpSpotifyPlaylists: Dump Spotify playlists to JSON
+- dumpPlexPlaylists: Dump Plex playlists to JSON
+- diffAndSyncPlaylists: Compare and sync Spotify/Plex playlists
+- runSync: Main sync operation
+- getSpotifyUserPlaylists, getSpotifyPlaylist, getSpotifyTracks: Spotify playlist helpers
+- parse_spotify_playlist_id: Extracts playlist ID from URL/URI
+- get_special_playlist: Fetches Discover Weekly or Release Radar and saves to correct folder
+
+"""
+
 import time
 import logging
 import json
 import os
-from typing import List
+from typing import List, Any, Dict
 import spotipy
 from plexapi.server import PlexServer
 from common_utils import filterPlexArray, createFolder
@@ -30,15 +45,57 @@ def retry_with_backoff(func, *args, **kwargs):
             backoff *= 2  # Exponential backoff
     raise Exception("Max retries exceeded")
 
+def parse_spotify_playlist_id(playlist_url_or_uri: str) -> str:
+    """
+    Extracts the playlist ID from a Spotify URL or URI.
+    Supports URLs like https://open.spotify.com/playlist/ID and URIs like spotify:playlist:ID
+    """
+    if 'playlist/' in playlist_url_or_uri:
+        return playlist_url_or_uri.split('playlist/')[1].split('?')[0]
+    elif 'spotify:playlist:' in playlist_url_or_uri:
+        return playlist_url_or_uri.split('spotify:playlist:')[1].split('?')[0]
+    else:
+        return playlist_url_or_uri  # Assume it's already an ID
+
+def get_special_playlist(sp: spotipy.Spotify, playlist_type: str) -> dict:
+    """
+    Fetches the Discover Weekly or Release Radar playlist for the current user.
+    playlist_type: 'discover_weekly' or 'release_radar'
+    Returns the playlist object.
+    """
+    # Official Spotify IDs (may change for some users)
+    ids = {
+        'discover_weekly': '37i9dQZEVXcJZyENOWUFo7',
+        'release_radar': '37i9dQZEVXbLRQDuF5jeBp',
+    }
+    playlist_id = ids.get(playlist_type)
+    if not playlist_id:
+        raise ValueError('Unknown playlist type')
+    # Use 'spotify' as the user for these algorithmic playlists
+    return retry_with_backoff(sp.user_playlist, 'spotify', playlist_id)
+
 # Dump Spotify playlists to a JSON file
-def dumpSpotifyPlaylists(sp: spotipy.Spotify, spotifyURIs: [], dumpFile: str):
+def dumpSpotifyPlaylists(sp: spotipy.Spotify, spotifyURIs: list[dict], dumpFile: str):
+    """
+    Dumps Spotify playlists to a JSON file. Special handling for Discover Weekly and Release Radar.
+    """
     playlists = []
     for spotifyUriParts in spotifyURIs:
-        if 'user' in spotifyUriParts.keys() and 'playlist' not in spotifyUriParts.keys():
+        # Special handling for Discover Weekly and Release Radar
+        if spotifyUriParts.get('special') == 'discover_weekly':
+            playlist = get_special_playlist(sp, 'discover_weekly')
+            playlist['__folder__'] = 'Discover Weekly'
+            playlists.append(playlist)
+        elif spotifyUriParts.get('special') == 'release_radar':
+            playlist = get_special_playlist(sp, 'release_radar')
+            playlist['__folder__'] = 'Release Radar'
+            playlists.append(playlist)
+        elif 'user' in spotifyUriParts.keys() and 'playlist' not in spotifyUriParts.keys():
             playlists.extend(getSpotifyUserPlaylists(sp, spotifyUriParts['user']))
         elif 'user' in spotifyUriParts.keys() and 'playlist' in spotifyUriParts.keys():
             playlists.append(getSpotifyPlaylist(sp, spotifyUriParts['user'], spotifyUriParts['playlist']))
-    
+        elif 'playlist_id' in spotifyUriParts.keys():
+            playlists.append(sp.playlist(spotifyUriParts['playlist_id']))
     # Save playlists to a JSON file
     with open(dumpFile, 'w') as f:
         json.dump(playlists, f)
@@ -94,7 +151,7 @@ def diffAndSyncPlaylists(plex: PlexServer, sp: spotipy.Spotify, spotifyDumpFile:
             createPlaylist(plex, sp, spotifyPlaylist)
 
 # Main function to run the sync operation
-def runSync(plex: PlexServer, sp: spotipy.Spotify, spotifyURIs: []):
+def runSync(plex: PlexServer, sp: spotipy.Spotify, spotifyURIs: list[dict]):
     logging.info('Starting a Sync Operation')
     spotifyDumpFile = 'spotify_playlists.json'
     plexDumpFile = 'plex_playlists.json'
@@ -109,7 +166,7 @@ def runSync(plex: PlexServer, sp: spotipy.Spotify, spotifyURIs: []):
     logging.info('Finished a Sync Operation')
 
 # Retrieve all playlists for a Spotify user
-def getSpotifyUserPlaylists(sp: spotipy.client, userId: str) -> []:
+def getSpotifyUserPlaylists(sp: spotipy.client, userId: str) -> list[dict]:
     playlists = retry_with_backoff(sp.user_playlists, userId)
     spotifyPlaylists = []
     while playlists:
@@ -124,12 +181,12 @@ def getSpotifyUserPlaylists(sp: spotipy.client, userId: str) -> []:
     return spotifyPlaylists
 
 # Retrieve a specific Spotify playlist
-def getSpotifyPlaylist(sp: spotipy.client, userId: str, playlistId: str) -> []:
+def getSpotifyPlaylist(sp: spotipy.client, userId: str, playlistId: str) -> dict:
     playlist = retry_with_backoff(sp.user_playlist, userId, playlistId)
     return playlist
 
 # Retrieve all tracks from a Spotify playlist
-def getSpotifyTracks(sp: spotipy.client, playlist: []) -> []:
+def getSpotifyTracks(sp: spotipy.client, playlist: dict) -> list[dict]:
     spotifyTracks = []
     tracks = playlist['tracks']
     spotifyTracks.extend(tracks['items'])

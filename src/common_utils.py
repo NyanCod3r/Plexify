@@ -1,3 +1,14 @@
+"""
+common_utils.py - Shared utilities for Plexify
+
+This module provides shared helpers for retry logic, folder creation, and Plex array filtering. Used by both Plex and Spotify modules.
+
+Key functions:
+- filterPlexArray: Filter Plex tracks by song/artist
+- createFolder: Ensure playlist folder exists
+- retry_with_backoff: Retry logic for API calls
+"""
+
 import os
 import logging
 import time
@@ -23,8 +34,8 @@ def filterPlexArray(plexItems=[], song="", artist="") -> List[Track]:
 # - playlistName: The name of the playlist (used as the folder name)
 # Logs whether the folder was created or already exists
 def createFolder(playlistName):
-    if not os.path.exists(os.environ.get('SPOTIPY_PATH') + '/' + playlistName):
-        os.makedirs(os.environ.get('SPOTIPY_PATH') + '/' + playlistName)
+    if not os.path.exists(os.environ.get('MUSIC_PATH') + '/' + playlistName):
+        os.makedirs(os.environ.get('MUSIC_PATH') + '/' + playlistName)
         logging.debug('Created folder %s' % playlistName)
     else:
         logging.debug('Folder %s already exists' % playlistName)

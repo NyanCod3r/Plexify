@@ -1,3 +1,14 @@
+"""
+main.py - Entry point for Plexify
+
+This script initializes logging, loads configuration from environment variables, connects to Plex and Spotify, parses playlist URIs, and runs the main sync loop. Designed for integration with Streamlit UI.
+
+Key functions/classes:
+- Loads and parses SPOTIFY_URIS
+- Connects to Plex and Spotify
+- Calls runSync from utils.py in a loop
+"""
+
 import logging
 import os
 import time

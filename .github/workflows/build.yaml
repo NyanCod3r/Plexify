@@ -62,5 +62,5 @@ jobs:
           SPOTIPY_CLIENT_SECRET: ${{ secrets.SPOTIPY_CLIENT_SECRET }}
         run: |
           docker run --rm --name test \
-          -e SPOTIPY_CLIENT_ID -e SPOTIPY_CLIENT_SECRET \
+          -e SPOTIFY_CLIENT_ID -e SPOTIFY_CLIENT_SECRET \
           nyancod3r/plexify:${{ github.event.release.tag_name }} python -m unittest discover -s tests -v

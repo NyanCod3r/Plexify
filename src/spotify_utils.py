@@ -1,3 +1,15 @@
+"""
+spotify_utils.py - Spotify API helpers for Plexify
+
+This module provides functions for parsing Spotify URIs, retrieving playlists and tracks, and retrying API calls. Used by utils.py and other modules.
+
+Key functions:
+- parseSpotifyURI: Parse Spotify URI into components
+- getSpotifyPlaylist: Fetch a specific playlist
+- getSpotifyUserPlaylists: Fetch all playlists for a user
+- getSpotifyTracks: Fetch all tracks from a playlist
+"""
+
 import re
 import spotipy
 import logging

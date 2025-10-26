@@ -21,12 +21,12 @@ RUN apk add --no-cache ffmpeg
 RUN pip install -r /app/requirements.txt
 
 # Print ASCII art with release version
-RUN echo "██████╗ ██╗     ███████╗██╗  ██╗██╗███████╗██╗   ██╗" > /ascii_art.txt && \
-    echo "██╔══██╗██║     ██╔════╝╚██╗██╔╝██║██╔════╝╚██╗ ██╔╝" >> /ascii_art.txt && \
-    echo "██████╔╝██║     █████╗   ╚███╔╝ ██║█████╗   ╚████╔╝ " >> /ascii_art.txt && \
-    echo "██╔═══╝ ██║     ██╔══╝   ██╔██╗ ██║██╔══╝    ╚██╔╝  " >> /ascii_art.txt && \
-    echo "██║     ███████╗███████╗██╔╝ ██╗██║██║        ██║   " >> /ascii_art.txt && \
-    echo "╚═╝     ╚══════╝╚══════╝╚═╝  ╚═╝╚═╝╚═╝        ╚═╝   " >> /ascii_art.txt && \
+RUN echo "██████╗ ██╗     ███████╗██╗  ██╗ ██╗ ███████╗██╗   ██╗" > /ascii_art.txt && \
+    echo "██╔══██╗██║     ██╔════╝╚██╗██╔╝ ██║ ██╔════╝╚██╗ ██╔╝" >> /ascii_art.txt && \
+    echo "██████╔╝██║     █████╗   ╚███╔╝  ██║ █████╗   ╚████╔╝ " >> /ascii_art.txt && \
+    echo "██╔═══╝ ██║     ██╔══╝   ██╔██╗  ██║ ██╔══╝    ╚██╔╝  " >> /ascii_art.txt && \
+    echo "██║     ███████╗███████╗██╔╝ ██╗ ██║ ██║        ██║   " >> /ascii_art.txt && \
+    echo "╚═╝     ╚══════╝╚══════╝╚═╝  ╚═╝ ╚═╝ ╚═╝        ╚═╝   " >> /ascii_art.txt && \
     echo "Release Version: ${RELEASE_VERSION}" >> /ascii_art.txt
 
 # Run the main script
