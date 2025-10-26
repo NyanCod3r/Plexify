@@ -20,7 +20,7 @@ jobs:
         id: release
         uses: googleapis/release-please-action@v4
         with:
-          release-type: simple
+          release-type: python
 
   docker:
     if: github.event_name == 'release'
