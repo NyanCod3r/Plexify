@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0-beta](https://github.com/NyanCod3r/Plexify/compare/v1.2.0-beta...v1.3.0-beta) (2025-10-26)
+
+
+### Features
+
+* **ci:** Add manual workflow dispatch for stable releases ([7fb2a05](https://github.com/NyanCod3r/Plexify/commit/7fb2a05070d1467097402749d75d6639963a3611))
+
 ## [1.2.0-beta](https://github.com/NyanCod3r/Plexify/compare/v1.1.1-beta...v1.2.0-beta) (2025-10-26)
 
 
