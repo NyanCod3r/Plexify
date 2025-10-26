@@ -6,7 +6,42 @@ on:
       - master
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.12]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./src/Dockerfile
+          load: true
+          tags: nyancod3r/plexify:test
+
+      - name: Run Tests
+        env:
+          SPOTIPY_CLIENT_ID: ${{ secrets.SPOTIPY_CLIENT_ID }}
+          SPOTIPY_CLIENT_SECRET: ${{ secrets.SPOTIPY_CLIENT_SECRET }}
+        run: |
+          docker run --rm --name test \
+          -e SPOTIPY_CLIENT_ID \
+          -e SPOTIPY_CLIENT_SECRET \
+          -e PYTHONPATH=/app/src \
+          nyancod3r/plexify:test python -m unittest discover -s /app/tests -v
+
   release:
+    needs: test
     runs-on: ubuntu-latest
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
@@ -43,25 +78,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./src/Dockerfile
-          load: true
-          tags: nyancod3r/plexify:${{ needs.release.outputs.tag_name }}
-
-      - name: Test 
-        env:
-          SPOTIPY_CLIENT_ID: ${{ secrets.SPOTIPY_CLIENT_ID }}
-          SPOTIPY_CLIENT_SECRET: ${{ secrets.SPOTIPY_CLIENT_SECRET }}
-        run: |
-          docker run --rm --name test \
-          -e SPOTIPY_CLIENT_ID \
-          -e SPOTIPY_CLIENT_SECRET \
-          -e PYTHONPATH=/app/src \
-          nyancod3r/plexify:${{ needs.release.outputs.tag_name }} python -m unittest discover -s /app/tests -v
       
       - name: Push Docker image
         uses: docker/build-push-action@v5
