@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.0](https://github.com/NyanCod3r/Plexify/compare/v1.1.0...v1.2.0) (2025-10-26)
+
+
+### Features
+
+* **sync:** Change logic to not remove tracks from Plex ([40a5bb6](https://github.com/NyanCod3r/Plexify/commit/40a5bb6973ea47bde8723bfc4f9d39485f62e774))
+
+
+### Bug Fixes
+
+* **plex:** Add missing getPlexPlaylists function ([be8c245](https://github.com/NyanCod3r/Plexify/commit/be8c245025559cf16049b353300b60500913c27a))
+
 ## [1.1.0](https://github.com/NyanCod3r/Plexify/compare/v1.1.0...v1.1.0) (2025-10-26)
 
 
