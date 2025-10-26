@@ -56,7 +56,7 @@ jobs:
           build-args: |
             RELEASE_VERSION=${{ needs.release.outputs.tag_name }}
 
-      - name: Test
+      - name: Test 
         env:
           SPOTIPY_CLIENT_ID: ${{ secrets.SPOTIPY_CLIENT_ID }}
           SPOTIPY_CLIENT_SECRET: ${{ secrets.SPOTIPY_CLIENT_SECRET }}
