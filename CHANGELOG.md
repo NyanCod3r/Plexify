@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1-beta](https://github.com/NyanCod3r/Plexify/compare/v1.3.0-beta...v1.3.1-beta) (2025-10-26)
+
+
+### Bug Fixes
+
+* **ci:** Adjust docker build context to include tests ([25d30f8](https://github.com/NyanCod3r/Plexify/commit/25d30f8db7ed844e83fe58f975b2cdb1d6d610b2))
+
 ## [1.3.0-beta](https://github.com/NyanCod3r/Plexify/compare/v1.2.0-beta...v1.3.0-beta) (2025-10-26)
 
 
