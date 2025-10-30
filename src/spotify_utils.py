@@ -1,13 +1,14 @@
 """
 spotify_utils.py - Spotify API helpers for Plexify
 
-This module provides functions for parsing Spotify URIs, retrieving playlists and tracks, and retrying API calls. Used by utils.py and other modules.
+This module provides functions for interacting with the Spotify API. It handles
+parsing URIs, fetching user playlists, and retrieving all tracks from a playlist.
 
 Key functions:
-- parseSpotifyURI: Parse Spotify URI into components
-- getSpotifyPlaylist: Fetch a specific playlist
-- getSpotifyUserPlaylists: Fetch all playlists for a user
-- getSpotifyTracks: Fetch all tracks from a playlist
+- parseSpotifyURI: Parse Spotify URI into components.
+- getSpotifyPlaylist: Fetch a specific playlist by ID.
+- getSpotifyUserPlaylists: Fetch all playlists for a given user.
+- getSpotifyTracks: Fetch all tracks from a playlist object.
 """
 
 import re
@@ -21,7 +22,13 @@ from common_utils import retry_with_backoff
 # Returns: A dictionary containing the parsed components
 def parseSpotifyURI(uriString: str) -> {}:
     logging.debug(f"Parsing Spotify URI: {uriString}")
+    if not uriString:
+        logging.warning("Received an empty Spotify URI string.")
+        return {}
     spotifyUriStrings = re.sub(r'^spotify:', '', uriString).split(":")
+    if len(spotifyUriStrings) % 2 != 0:
+        logging.error(f"Invalid or incomplete Spotify URI provided: '{uriString}'")
+        return {}
     spotifyUriParts = {}
     for i, string in enumerate(spotifyUriStrings):
         if i % 2 == 0:

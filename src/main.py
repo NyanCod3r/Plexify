@@ -1,11 +1,13 @@
 """
 main.py - Entry point for Plexify
 
-This script initializes logging, loads configuration from environment variables, connects to Plex and Spotify, parses playlist URIs, and runs the main sync loop. Designed for integration with Streamlit UI.
+This script initializes logging, loads configuration from environment variables,
+connects to Plex and Spotify, and runs the main sync loop. It can sync playlists
+based on user URIs.
 
 Key functions/classes:
 - Loads and parses SPOTIFY_URIS
-- Connects to Plex and Spotify
+- Connects to Plex and Spotify using Client Credentials
 - Calls runSync from utils.py in a loop
 """
 
@@ -18,32 +20,19 @@ import spotipy
 from spotify_utils import parseSpotifyURI
 from utils import runSync
 
-# Configure logging based on PLEXIFY_DEBUG environment variable
-debug_mode = os.environ.get('PLEXIFY_DEBUG', '0') == '1'
+# Configure logging based on LOG_LEVEL environment variable
+log_level = os.environ.get('LOG_LEVEL', 'INFO').upper()
 logging.basicConfig(
     format='%(asctime)s %(levelname)s: %(message)s',
-    level=logging.DEBUG if debug_mode else logging.INFO
+    level=log_level
 )
 
 logging.info("Starting Plexify...")
-if debug_mode:
+if log_level == 'DEBUG':
     logging.debug("Debug mode is enabled. Detailed logs will be shown.")
-else:
-    logging.info("Debug mode is disabled. Only main actions will be logged.")
 
 # Entry point of the application
 if __name__ == '__main__':
-    # Retrieve Spotify URIs from environment variables
-    spotifyUris = os.environ.get('SPOTIFY_URIS')
-
-    # If no Spotify URIs are provided, log an error and exit
-    if spotifyUris is None:
-        logging.error("No Spotify URIs provided! We need at least one to work with.")
-        exit(1)
-
-    # Retrieve the interval to wait between sync operations (default: 3600 seconds)
-    secondsToWait = int(os.environ.get('SECONDS_TO_WAIT', 3600))
-
     # Retrieve Plex server URL and token from environment variables
     baseurl = os.environ.get('PLEX_URL')
     token = os.environ.get('PLEX_TOKEN')
@@ -70,20 +59,27 @@ if __name__ == '__main__':
         logging.error(f"Failed to authenticate with Spotify: {e}")
         exit(1)
 
-    # Split the Spotify URIs into a list
-    spotifyUris = spotifyUris.split(",")
+    # Retrieve and parse Spotify URIs from environment variables
+    spotify_uris_str = os.environ.get('SPOTIFY_URIS', '')
+    spotify_uris = []
+    if spotify_uris_str:
+        for spotifyUri in spotify_uris_str.split(','):
+            spotifyUriParts = parseSpotifyURI(spotifyUri)
+            if spotifyUriParts:
+                spotify_uris.append(spotifyUriParts)
 
-    # Parse each Spotify URI into its components and store them in a list
-    spotifyMainUris = []
-    for spotifyUri in spotifyUris:
-        spotifyUriParts = parseSpotifyURI(spotifyUri)
-        spotifyMainUris.append(spotifyUriParts)
+    if not spotify_uris:
+        logging.error("SPOTIFY_URIS is not set. Exiting.")
+        exit(1)
+
+    # Retrieve the interval to wait between sync operations (default: 3600 seconds)
+    secondsToWait = int(os.environ.get('SECONDS_TO_WAIT', 3600))
 
     # Main loop: continuously sync Spotify playlists with Plex
     while True:
         try:
             # Run the sync operation
-            runSync(plex, sp, spotifyMainUris)
+            runSync(plex, sp, spotify_uris)
         except Exception as e:
             logging.error(f"An error occurred during the sync operation: {e}")
 
