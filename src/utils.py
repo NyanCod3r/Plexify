@@ -2,8 +2,9 @@
 utils.py - Core synchronization logic for Plexify
 
 This module contains the main functions that drive the synchronization process
-between Spotify and Plex. It orchestrates the fetching of playlists by user URI
-or by name, and then creates or updates the corresponding playlists in Plex.
+between Spotify and Plex. It orchestrates the fetching of playlists by user URI,
+and then creates or updates the corresponding playlists in Plex.
+It also triggers the discovery playlist generation.
 
 Key functions:
 - runSync: Main entry point to start the synchronization.
@@ -17,7 +18,7 @@ import json
 import logging
 from plexapi.server import PlexServer
 import spotipy
-from spotify_utils import getSpotifyUserPlaylists, findPlaylistsByName
+from spotify_utils import getSpotifyUserPlaylists, getSpotifyPlaylist
 from plex_utils import getPlexPlaylists, createPlaylist
 
 # Main function to run the synchronization process
@@ -29,6 +30,7 @@ def runSync(plex: PlexServer, sp: spotipy.client, spotify_uris: []):
     spotifyPlaylists = dumpSpotifyPlaylists(sp, spotify_uris)
     plexPlaylists = dumpPlexPlaylists(plex)
     diffAndSyncPlaylists(plex, sp, spotifyPlaylists, plexPlaylists)
+
     logging.info("Synchronization process finished.")
 
 # Dumps all relevant Spotify playlists to a JSON file
@@ -39,16 +41,19 @@ def dumpSpotifyPlaylists(sp: spotipy.client, spotify_uris: []) -> []:
     logging.info("Dumping Spotify playlists...")
     spotifyPlaylists = []
     for uri in spotify_uris:
-        spotifyPlaylists.extend(getSpotifyUserPlaylists(sp, uri['user']))
-
-    playlist_names_str = os.environ.get('SPOTIFY_PLAYLIST_NAMES', '')
-    if playlist_names_str:
-        playlist_names = [name.strip() for name in playlist_names_str.split(',')]
-        spotifyPlaylists.extend(findPlaylistsByName(sp, playlist_names))
-
-    with open('spotify_playlists.json', 'w') as f:
-        json.dump(spotifyPlaylists, f, indent=4)
-    logging.info(f"Successfully dumped {len(spotifyPlaylists)} Spotify playlists.")
+        if 'user' in uri:
+            spotifyPlaylists.extend(getSpotifyUserPlaylists(sp, uri['user']))
+        elif 'playlist' in uri:
+            # Use a dummy user, Spotify API does not require user for public playlists
+            spotifyPlaylists.append(getSpotifyPlaylist(sp, '', uri['playlist']))
+        else:
+            logging.warning(f"Unknown URI type: {uri}")
+    if spotifyPlaylists:
+        with open('spotify_playlists.json', 'w') as f:
+            json.dump(spotifyPlaylists, f, indent=4)
+        logging.info(f"Successfully dumped {len(spotifyPlaylists)} Spotify playlists.")
+    else:
+        logging.warning("No Spotify playlists found to dump.")
     return spotifyPlaylists
 
 # Dumps all Plex playlists to a JSON file
@@ -67,6 +72,9 @@ def dumpPlexPlaylists(plex: PlexServer) -> []:
 # - plexPlaylists: A list of Plex playlists
 def diffAndSyncPlaylists(plex: PlexServer, sp: spotipy.client, spotifyPlaylists: [], plexPlaylists: []):
     logging.info("Starting playlist diff and sync...")
+    if not spotifyPlaylists:
+        logging.info("No Spotify playlists to sync.")
+        return
     for playlist in spotifyPlaylists:
         logging.debug(f"Processing Spotify playlist: {playlist['name']}")
         createPlaylist(plex, sp, playlist)

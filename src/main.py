@@ -3,11 +3,11 @@ main.py - Entry point for Plexify
 
 This script initializes logging, loads configuration from environment variables,
 connects to Plex and Spotify, and runs the main sync loop. It can sync playlists
-based on user URIs or by specific playlist names.
+based on user URIs.
 
 Key functions/classes:
-- Loads and parses SPOTIFY_URIS and SPOTIFY_PLAYLIST_NAMES
-- Connects to Plex and Spotify
+- Loads and parses SPOTIFY_URIS
+- Connects to Plex and Spotify using Client Credentials
 - Calls runSync from utils.py in a loop
 """
 
@@ -68,10 +68,8 @@ if __name__ == '__main__':
             if spotifyUriParts:
                 spotify_uris.append(spotifyUriParts)
 
-    # Retrieve playlist names from environment variables
-    playlist_names_str = os.environ.get('SPOTIFY_PLAYLIST_NAMES', '')
-    if not spotify_uris and not playlist_names_str:
-        logging.error("Neither SPOTIFY_URIS nor SPOTIFY_PLAYLIST_NAMES are set. Exiting.")
+    if not spotify_uris:
+        logging.error("SPOTIFY_URIS is not set. Exiting.")
         exit(1)
 
     # Retrieve the interval to wait between sync operations (default: 3600 seconds)

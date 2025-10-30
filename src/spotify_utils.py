@@ -2,14 +2,12 @@
 spotify_utils.py - Spotify API helpers for Plexify
 
 This module provides functions for interacting with the Spotify API. It handles
-parsing URIs, fetching user playlists, finding playlists by name, and retrieving
-all tracks from a playlist.
+parsing URIs, fetching user playlists, and retrieving all tracks from a playlist.
 
 Key functions:
 - parseSpotifyURI: Parse Spotify URI into components.
 - getSpotifyPlaylist: Fetch a specific playlist by ID.
 - getSpotifyUserPlaylists: Fetch all playlists for a given user.
-- findPlaylistsByName: Search for and retrieve playlists by their exact names.
 - getSpotifyTracks: Fetch all tracks from a playlist object.
 """
 
@@ -70,25 +68,6 @@ def getSpotifyUserPlaylists(sp: spotipy.client, userId: str) -> []:
             playlists = None
     logging.info(f"Retrieved {len(spotifyPlaylists)} playlists for user: {userId}")
     return spotifyPlaylists
-
-# Finds and retrieves playlists by their exact names from the current user's library
-# - sp: The Spotify client instance
-# - playlist_names: A list of playlist names to search for
-# Returns: A list of found Spotify playlist objects
-def findPlaylistsByName(sp: spotipy.client, playlist_names: List[str]) -> List:
-    found_playlists = []
-    user_playlists = retry_with_backoff(sp.current_user_playlists)
-    while user_playlists:
-        for playlist in user_playlists['items']:
-            if playlist['name'] in playlist_names:
-                logging.info(f"Found playlist by name: {playlist['name']}")
-                full_playlist = getSpotifyPlaylist(sp, playlist['owner']['id'], playlist['id'])
-                found_playlists.append(full_playlist)
-        if user_playlists['next']:
-            user_playlists = retry_with_backoff(sp.next, user_playlists)
-        else:
-            user_playlists = None
-    return found_playlists
 
 # Retrieves all tracks from a Spotify playlist
 # - sp: The Spotify client instance

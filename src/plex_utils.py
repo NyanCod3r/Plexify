@@ -81,19 +81,3 @@ def createPlaylist(plex: PlexServer, sp: spotipy.Spotify, playlist: []):
             logging.info("Something wrong for playlist %s" % playlistName)
     else:
         logging.info("No tracks found for playlist %s" % playlistName)
-
-def delete_unmatched_files(plex: PlexServer, spotifyTracks: [], playlistName: str) -> List[Track]:
-    try:
-        plexPlaylist = plex.playlist(playlistName)
-        plexTracks = plexPlaylist.items()
-        spotify_tracks = [track['track']['name'] for track in spotifyTracks]
-        tracks_to_delete = set(track.title for track in plexTracks) - set(spotify_tracks)
-        plex_playlist = plex.playlist(playlistName)
-        for track_title in tracks_to_delete:
-            track = next((item for item in plexTracks if item.title == track_title), None)
-            if track is not None:
-                print('Deleting track:', track_title)
-                plex_playlist.removeItems(track)
-                track.delete()
-    except Exception as e:
-        logging.debug(f"Issue deleting tracks from playlist: {str(e)}")
