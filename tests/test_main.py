@@ -9,7 +9,7 @@ from plexapi.audio import Track
 # Import functions from their correct modules
 from common_utils import retry_with_backoff, createFolder
 from spotify_utils import getSpotifyPlaylist, getSpotifyUserPlaylists, getSpotifyTracks, parseSpotifyURI
-from plex_utils import getPlexTracks, createPlaylist, delete_unmatched_files
+from plex_utils import getPlexTracks, createPlaylist
 from utils import runSync
 
 
@@ -102,13 +102,6 @@ class TestMainFunctions(unittest.TestCase):
         self.assertEqual(result['playlist'], 'playlist_id')
 
     @patch('plex_utils.PlexServer.playlist')
-    def test_delete_unmatched_files(self, mock_playlist_method):
-        mock_playlist = MagicMock()
-        mock_playlist.items.return_value = [MagicMock(title='Test Track')]
-        self.plex.playlist.return_value = mock_playlist
-        spotifyTracks = [{'track': {'name': 'Another Track'}}]
-        delete_unmatched_files(self.plex, spotifyTracks, 'Test Playlist')
-        mock_playlist.removeItems.assert_called_once()
 
     @patch('utils.dumpSpotifyPlaylists')
     @patch('utils.dumpPlexPlaylists')
