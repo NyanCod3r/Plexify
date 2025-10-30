@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.3.0](https://github.com/NyanCod3r/Plexify/compare/v1.2.0...v1.3.0) (2025-10-30)
+
+
+### Features
+
+* **sync:** Add support for playlist URIs and clarify add-only sync logic ([eaf4436](https://github.com/NyanCod3r/Plexify/commit/eaf44367a46653b475f45114bcc9ab7088985ff9))
+* **sync:** Add support for playlist URIs and clarify add-only sync logic ([dcdd564](https://github.com/NyanCod3r/Plexify/commit/dcdd564db04474c2e0496de11cb9a3d17a3abc2b))
+* **sync:** Add support for playlist URIs and clarify add-only sync logic ([3485f26](https://github.com/NyanCod3r/Plexify/commit/3485f26501db1ccc68d2b9118dd67e80faff3d0d))
+
+
+### Bug Fixes
+
+* **sync:** Apply local fixes to sync and utils ([8c3458d](https://github.com/NyanCod3r/Plexify/commit/8c3458dceda8a56013badd922de4e035c618405a))
+* **tests:** Fix test_runSync argument count and show full code ([c0bb55b](https://github.com/NyanCod3r/Plexify/commit/c0bb55bef1042a56c98bc9b3d906c5b96b74af82))
+* **tests:** Remove import of missing delete_unmatched_files from test_main.py ([7b57ee2](https://github.com/NyanCod3r/Plexify/commit/7b57ee2d92cb3cb03cb1a1cda9a46b4ddf07cb28))
+
 ## [1.2.0](https://github.com/NyanCod3r/Plexify/compare/v1.1.0...v1.2.0) (2025-10-26)
 
 
