@@ -7,7 +7,7 @@ from plexapi.server import PlexServer
 from plexapi.audio import Track
 from typing import List
 from plexapi.exceptions import BadRequest, NotFound
-from common_utils import filterPlexArray, createFolder, download_throttle
+from common_utils import filterPlexArray, createFolder
 from spotify_utils import getSpotifyTracks
 import spotipy
 
