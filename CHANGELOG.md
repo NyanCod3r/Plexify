@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.3.1](https://github.com/NyanCod3r/Plexify/compare/v1.3.0...v1.3.1) (2025-11-01)
+
+
+### Bug Fixes
+
+* **docs:** Add README guidelines to local prompt instructions ([62ae104](https://github.com/NyanCod3r/Plexify/commit/62ae1044fc0f0b6ec1892d84a49cc6a2fb580fac))
+* **plex_utils:** Removed API Throttle ([5cb065c](https://github.com/NyanCod3r/Plexify/commit/5cb065ca0d8abe664f88b707048e6d5bb19a3115))
+* **sync:** Make Discover Weekly/Release Radar 1:1 and delete local files when removing tracks from Plex playlists ([6917c13](https://github.com/NyanCod3r/Plexify/commit/6917c134780458d90fcf921c458cc5b3e9fb59a8))
+
 ## [1.3.0](https://github.com/NyanCod3r/Plexify/compare/v1.2.0...v1.3.0) (2025-10-30)
 
 
