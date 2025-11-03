@@ -4,6 +4,8 @@ Plexify automatically syncs public Spotify playlists to your Plex server. It can
 
 ## How it works
 
+<video src="files/run_example.gif" controls width="600"></video>
+
 The application synchronizes playlists by adding new tracks from Spotify to your Plex playlists.
 
 1.  **Reads Configuration**: The application loads configuration from environment variables, including connection details for Plex and Spotify, and the list of Spotify URIs to sync.
