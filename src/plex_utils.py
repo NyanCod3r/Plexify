@@ -83,7 +83,6 @@ def getPlexTracks(plex: PlexServer, spotifyTracks: [], playlistName) -> List[Tra
         createFolder(playlistName)
         try:
             output_template = os.path.join(music_path or '', playlistName, '{artist} - {title}.{output-ext}')
-            download_throttle.acquire()
             command = [
                 'spotdl', '--output',
                 output_template,
