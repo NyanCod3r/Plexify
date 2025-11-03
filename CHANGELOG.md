@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.2](https://github.com/NyanCod3r/Plexify/compare/v1.3.1...v1.3.2) (2025-11-03)
+
+
+### Bug Fixes
+
+* **plex_utils:** Fixed download issue due to incorrect coding ([28b946e](https://github.com/NyanCod3r/Plexify/commit/28b946eaaa16645d85bc6c07d7b5bc7f372b3530))
+
 ## [1.3.1](https://github.com/NyanCod3r/Plexify/compare/v1.3.0...v1.3.1) (2025-11-01)
 
 
