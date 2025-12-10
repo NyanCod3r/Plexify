@@ -1,220 +1,185 @@
-# ...existing code...
 import os
 import logging
 import subprocess
 import eyed3
-from plexapi.server import PlexServer
-from plexapi.audio import Track
+import time
+import glob
 from typing import List
-from plexapi.exceptions import BadRequest, NotFound
-from common_utils import filterPlexArray, createFolder
+from common_utils import createFolder
 from spotify_utils import getSpotifyTracks
 import spotipy
 
-def _track_identity_from_plex(track: Track) -> tuple:
-    title = (getattr(track, "title", "") or "").strip().lower()
-    artist = ""
-    try:
-        artist = (track.grandparentTitle or "").strip().lower()
-    except Exception:
-        try:
-            artist = (track.artist().title or "").strip().lower()
-        except Exception:
-            artist = ""
-    return (title, artist)
-
-def _track_identity_from_spotify_item(spotify_item: dict) -> tuple:
-    track = spotify_item.get('track') or {}
-    title = (track.get('name') or "").strip().lower()
-    artist = (track.get('artists') or [{}])[0].get('name', "")
-    artist = (artist or "").strip().lower()
-    return (title, artist)
-
-def _safely_delete_local_file(path: str, music_root: str):
-    try:
-        if not path:
-            return False
-        if not music_root:
-            return False
-        path_abs = os.path.abspath(path)
-        music_root_abs = os.path.abspath(music_root)
-        if not path_abs.startswith(music_root_abs):
-            logging.debug(f"Skipping deletion of {path_abs}: outside MUSIC_PATH {music_root_abs}")
-            return False
-        if os.path.exists(path_abs):
-            os.remove(path_abs)
-            logging.info(f"Deleted local file: {path_abs}")
-            return True
-        return False
-    except Exception as e:
-        logging.debug(f"Failed to delete local file {path}: {str(e)}")
-        return False
-
-def getPlexTracks(plex: PlexServer, spotifyTracks: [], playlistName) -> List[Track]:
-    plexTracks = []
+def ensureLocalFiles(sp: spotipy.Spotify, playlist: dict):
+    """
+    Ensures all tracks from a Spotify playlist exist as local files.
+    Downloads missing tracks to MUSIC_PATH/<playlist_name>/.
+    """
+    playlistName = playlist.get('name', '')
+    logging.info(f'Ensuring local files for playlist: {playlistName}')
+    
     music_path = os.environ.get('MUSIC_PATH', '')
-    for spotifyTrack in spotifyTracks:
+    if not music_path:
+        logging.error("MUSIC_PATH not set. Cannot download tracks.")
+        return
+    
+    # Create playlist folder
+    playlist_folder = os.path.join(music_path, playlistName)
+    createFolder(playlistName)
+    logging.info(f"📁 Target download folder: {playlist_folder}")
+    
+    # Get spotdl log level from env - default to INFO to avoid too much output
+    # Use separate SPOTDL_LOG_LEVEL or default to same as LOG_LEVEL
+    spotdl_log_level = os.environ.get('SPOTDL_LOG_LEVEL', os.environ.get('LOG_LEVEL', 'INFO')).upper()
+    
+    # Get cookie file path if provided
+    cookie_file = os.environ.get('SPOTDL_COOKIE_FILE', '')
+    
+    # Get delay between downloads (default 2 seconds to avoid rate limits)
+    download_delay = int(os.environ.get('DOWNLOAD_DELAY', '2'))
+    
+    spotifyTracks = getSpotifyTracks(sp, playlist)
+    logging.info(f"Processing {len(spotifyTracks)} tracks for playlist: {playlistName}")
+    
+    for idx, spotifyTrack in enumerate(spotifyTracks, 1):
         track = spotifyTrack.get('track')
         if not track:
             continue
+            
         track_name = (track.get('name') or '').title()
         artist_name = (track.get('artists', [{}])[0].get('name') or '').title()
-        logging.debug("Searching Plex for: %s by %s" % (track_name, artist_name))
-        try:
-            musicTracks = plex.search(track_name, mediatype='track')
-            exact_track = next((t for t in musicTracks if t.title == track_name and getattr(t, 'grandparentTitle', None) == artist_name), None)
-        except Exception as e:
-            logging.debug(f"Issue making plex request: {str(e)}")
+        
+        logging.info(f"[{idx}/{len(spotifyTracks)}] Processing: {artist_name} - {track_name}")
+        
+        # Check if file already exists with flexible matching
+        # Look for any file matching "artist - title.mp3" (case-insensitive, ignore special chars)
+        artist_pattern = artist_name.replace('/', '').replace('_', '').replace(' ', '').lower()
+        track_pattern = track_name.replace('/', '').replace('_', '').replace(' ', '').lower()
+        
+        file_exists = False
+        for existing_file in glob.glob(os.path.join(playlist_folder, '*.mp3')):
+            filename = os.path.basename(existing_file).lower()
+            # Remove special chars and spaces for comparison
+            normalized = filename.replace('/', '').replace('_', '').replace(' ', '')
+            
+            if artist_pattern in normalized and track_pattern in normalized:
+                logging.info(f"✓ File already exists: {os.path.basename(existing_file)}")
+                file_exists = True
+                break
+        
+        if file_exists:
             continue
-
-        if exact_track is not None:
-            plexMusic = filterPlexArray(musicTracks, track.get('name', ''), track.get('artists', [{}])[0].get('name', ''))
-            if len(plexMusic) > 0:
-                logging.debug("Found Plex Song: %s by %s" % (track.get('name', ''), track.get('artists', [{}])[0].get('name', '')))
-                plexTracks.append(plexMusic[0])
-            continue
-
-        logging.info("Could not find song in Plex Library: %s by %s , downloading" % (track.get('name', ''), track.get('artists', [{}])[0].get('name', '')))
+        
+        # Download the track
         sp_uri = track.get('external_urls', {}).get('spotify')
         if not sp_uri:
-            logging.debug(f"No Spotify URL for track {track_name}. Skipping download.")
+            logging.warning(f"⚠️  No Spotify URL available, skipping")
             continue
-
-        createFolder(playlistName)
+        
+        logging.info(f"⬇️  Downloading from Spotify...")
+        
         try:
-            output_template = os.path.join(music_path or '', playlistName, '{artist} - {title}.{output-ext}')
+            # Use RELATIVE path for output template (relative to cwd)
+            output_template = '{artist} - {title}.{output-ext}'
+            
             command = [
-                'spotdl', '--output',
-                output_template,
-                '--download', sp_uri
+                'spotdl',
+                '--output', output_template,
+                '--log-level', spotdl_log_level,
+                '--lyrics',  # Disable lyrics (faster)
+                '--print-errors',  # Show errors immediately
             ]
-            subprocess.run(command, check=True, timeout=120)
-
-            sanitized_artist_name = artist_name.replace('/', '_').replace(':', '_').replace('?', '').replace('\\', '')
-            sanitized_track_name = track_name.replace('/', '_').replace(':', '_').replace('?', '').replace('\\', '')
-
-            downloaded_file = os.path.join(music_path or '', playlistName, f"{sanitized_artist_name} - {sanitized_track_name}.mp3")
-            if os.path.exists(downloaded_file):
-                try:
-                    audiofile = eyed3.load(downloaded_file)
-                    if audiofile is not None:
-                        if audiofile.tag is None:
-                            audiofile.initTag()
-                        audiofile.tag.album_artist = artist_name
-                        audiofile.tag.artist = artist_name
-                        audiofile.tag.title = track_name
-                        audiofile.tag.save()
-                except Exception as e:
-                    logging.debug(f"Failed to tag mp3 {downloaded_file}: {str(e)}")
-            else:
-                logging.debug(f"Downloaded file not found at expected path: {downloaded_file}")
-
-            try:
-                basename = os.path.basename(downloaded_file)
-                for section in plex.library.sections():
-                    if getattr(section, "type", None) in ('artist', 'album'):
-                        continue
-                    try:
-                        search_results = section.searchTracks(basename)
-                        if search_results:
-                            plexTracks.append(search_results[0])
+            
+            # Add cookie file if provided
+            if cookie_file and os.path.exists(cookie_file):
+                command.extend(['--cookie-file', cookie_file])
+                logging.debug(f"Using cookie file: {cookie_file}")
+            
+            command.append(sp_uri)
+            
+            logging.debug(f"🚀 Running: {' '.join(command)}")
+            logging.debug(f"📂 Working directory: {playlist_folder}")
+            logging.info("=" * 60)
+            
+            # Run spotdl with UNBUFFERED output for real-time progress
+            process = subprocess.Popen(
+                command,
+                cwd=playlist_folder,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=0,  # Unbuffered
+                universal_newlines=True,
+                env={**os.environ, 'PYTHONUNBUFFERED': '1'}  # Force Python unbuffered
+            )
+            
+            # Print output in real-time
+            for line in iter(process.stdout.readline, ''):
+                if line:
+                    line = line.rstrip()
+                    # Filter out empty lines
+                    if line.strip():
+                        logging.info(f"  spotdl: {line}")
+            
+            # Wait for process to complete
+            return_code = process.wait(timeout=300)
+            
+            logging.info("=" * 60)
+            
+            if return_code == 0:
+                # Find the downloaded file (spotdl may name it differently)
+                new_files = glob.glob(os.path.join(playlist_folder, '*.mp3'))
+                # Look for files modified in the last 10 seconds
+                import time as time_module
+                recent_file = None
+                for f in new_files:
+                    if time_module.time() - os.path.getmtime(f) < 10:
+                        filename = os.path.basename(f).lower()
+                        normalized = filename.replace('/', '').replace('_', '').replace(' ', '')
+                        if artist_pattern in normalized and track_pattern in normalized:
+                            recent_file = f
                             break
-                    except Exception:
-                        continue
-            except Exception as e:
-                logging.debug(f"Error searching Plex for downloaded file {downloaded_file}: {str(e)}")
-
-        except subprocess.TimeoutExpired:
-            logging.debug(f"Download timed out for song: {track_name}")
-            continue
-        except Exception as e:
-            logging.debug(f"Issue downloading song or no song found. Error: {str(e)}")
-            continue
-
-    return plexTracks
-
-def getPlexPlaylists(plex: PlexServer) -> List:
-    return plex.playlists()
-
-def createPlaylist(plex: PlexServer, sp: spotipy.Spotify, playlist: []):
-    playlistName = playlist.get('name', '')
-    logging.info('Starting playlist %s' % playlistName)
-    desired_plex_tracks = getPlexTracks(plex, getSpotifyTracks(sp, playlist), playlistName)
-
-    desired_identities = { _track_identity_from_plex(t) for t in desired_plex_tracks }
-    special_names = {'discover weekly', 'release radar'}
-    is_bidirectional = playlistName.strip().lower() in special_names
-    music_root = os.environ.get('MUSIC_PATH', '')
-
-    try:
-        playlistNames = [p.title for p in plex.playlists()]
-        if playlistName in playlistNames:
-            plexPlaylist = plex.playlist(playlistName)
-            logging.info('Updating playlist %s' % playlistName)
-
-            existing_items = list(plexPlaylist.items())
-            existing_id_map = { _track_identity_from_plex(item): item for item in existing_items }
-
-            if is_bidirectional:
-                # Remove items in Plex but not in Spotify (1:1)
-                to_remove_identities = [idt for idt in existing_id_map.keys() if idt not in desired_identities]
-                to_remove_items = [existing_id_map[idt] for idt in to_remove_identities]
-
-                if to_remove_items:
-                    logging.info("Removing %d tracks from Plex playlist %s to match Spotify (1:1)" % (len(to_remove_items), playlistName))
+                
+                if recent_file:
+                    file_size = os.path.getsize(recent_file) / (1024 * 1024)
+                    logging.info(f"✓ Downloaded: {os.path.basename(recent_file)} ({file_size:.2f} MB)")
+                    
+                    # Tag the file
                     try:
-                        plexPlaylist.removeItems(to_remove_items)
+                        audiofile = eyed3.load(recent_file)
+                        if audiofile:
+                            if not audiofile.tag:
+                                audiofile.initTag()
+                            audiofile.tag.album_artist = artist_name
+                            audiofile.tag.artist = artist_name
+                            audiofile.tag.title = track_name
+                            audiofile.tag.save()
+                            logging.info(f"✓ Tagged successfully")
                     except Exception as e:
-                        logging.debug(f"Failed to remove items from playlist {playlistName}: {str(e)}")
-
-                    # Delete underlying files for removed items (only if under MUSIC_PATH)
-                    for removed_item in to_remove_items:
-                        try:
-                            for media in getattr(removed_item, 'media', []) or []:
-                                for part in getattr(media, 'parts', []) or []:
-                                    file_path = getattr(part, 'file', None)
-                                    if file_path:
-                                        _safely_delete_local_file(file_path, music_root)
-                        except Exception as e:
-                            logging.debug(f"Error while deleting local files for removed item {removed_item}: {str(e)}")
-
-                # Add missing tracks
-                existing_identities = set(existing_id_map.keys()) - set(to_remove_identities)
-                to_add = [t for t in desired_plex_tracks if _track_identity_from_plex(t) not in existing_identities]
-                if to_add:
-                    logging.info("Adding %d missing tracks to Plex playlist %s (1:1)" % (len(to_add), playlistName))
-                    try:
-                        plexPlaylist.addItems(to_add)
-                    except Exception as e:
-                        logging.debug(f"Failed to add items to playlist {playlistName}: {str(e)}")
-
-            else:
-                # One-way sync (Spotify -> Plex): only add missing tracks
-                existing_identities = { _track_identity_from_plex(item) for item in existing_items }
-                to_add = [t for t in desired_plex_tracks if _track_identity_from_plex(t) not in existing_identities]
-                if to_add:
-                    logging.info("Adding %d missing tracks to Plex playlist %s" % (len(to_add), playlistName))
-                    try:
-                        plexPlaylist.addItems(to_add)
-                    except Exception as e:
-                        logging.debug(f"Failed to add items to playlist %playlistName: {str(e)}")
-        else:
-            # Playlist does not exist in Plex
-            if is_bidirectional:
-                logging.info("Creating 1:1 Plex playlist %s" % playlistName)
-                try:
-                    plex.createPlaylist(title=playlistName, items=desired_plex_tracks)
-                except Exception as e:
-                    logging.debug(f"Failed to create playlist {playlistName}: {str(e)}")
-            else:
-                if desired_plex_tracks:
-                    logging.info("Creating playlist %s" % playlistName)
-                    try:
-                        plex.createPlaylist(title=playlistName, items=desired_plex_tracks)
-                    except Exception as e:
-                        logging.debug(f"Failed to create playlist {playlistName}: {str(e)}")
+                        logging.warning(f"⚠️  Failed to tag: {str(e)}")
                 else:
-                    logging.info("No tracks found for playlist %s" % playlistName)
-    except (NotFound, BadRequest) as e:
-        logging.info("Something wrong for playlist %s: %s" % (playlistName, str(e)))
-# ...existing code...
+                    logging.warning(f"⚠️  Download completed but file not found")
+            else:
+                logging.error(f"✗ spotdl exited with code {return_code}")
+            
+            # Add delay between downloads to avoid rate limits
+            if idx < len(spotifyTracks) and download_delay > 0:
+                logging.debug(f"Waiting {download_delay}s before next download...")
+                time.sleep(download_delay)
+                
+        except subprocess.TimeoutExpired:
+            logging.error(f"✗ Download timed out (300s)")
+            try:
+                process.kill()
+                logging.warning(f"  Killed spotdl process")
+            except:
+                pass
+        except Exception as e:
+            logging.error(f"✗ Error: {str(e)}")
+    
+    logging.info("=" * 60)
+    logging.info(f"✅ Finished playlist: {playlistName}")
+    try:
+        files = [f for f in os.listdir(playlist_folder) if f.endswith('.mp3')]
+        logging.info(f"📊 Total MP3 files: {len(files)}")
+    except Exception:
+        logging.warning(f"Could not count files")
