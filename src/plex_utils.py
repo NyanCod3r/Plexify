@@ -9,6 +9,38 @@ from common_utils import createFolder
 from spotify_utils import getSpotifyTracks
 import spotipy
 
+# Suppress eyed3 POPM warnings
+import warnings
+warnings.filterwarnings('ignore', category=UserWarning, module='eyed3')
+
+def find_existing_file(music_path: str, artist_name: str, track_name: str, max_depth: int = 2) -> str:
+    """
+    Search for existing file in music library up to max_depth levels.
+    Returns full path if found, None otherwise.
+    """
+    # Normalize search terms (remove special chars, lowercase)
+    artist_norm = artist_name.replace('/', '').replace('_', '').replace(' ', '').replace('-','').lower()
+    track_norm = track_name.replace('/', '').replace('_', '').replace(' ', '').replace('-','').lower()
+    
+    # Search patterns for different depth levels
+    patterns = [
+        os.path.join(music_path, '*.mp3'),           # Root level
+        os.path.join(music_path, '*', '*.mp3'),      # 1 level deep (artist folders)
+        os.path.join(music_path, '*', '*', '*.mp3')  # 2 levels deep (artist/album folders)
+    ]
+    
+    for pattern in patterns[:max_depth + 1]:
+        for filepath in glob.glob(pattern):
+            filename = os.path.basename(filepath).lower()
+            # Remove special chars for comparison
+            normalized = filename.replace('/', '').replace('_', '').replace(' ', '').replace('-','')
+            
+            # Check if both artist and track are in filename
+            if artist_norm in normalized and track_norm in normalized:
+                return filepath
+    
+    return None
+
 def ensureLocalFiles(sp: spotipy.Spotify, playlist: dict):
     """
     Ensures all tracks from a Spotify playlist exist as local files.
@@ -28,7 +60,6 @@ def ensureLocalFiles(sp: spotipy.Spotify, playlist: dict):
     logging.info(f"📁 Target download folder: {playlist_folder}")
     
     # Get spotdl log level from env - default to INFO to avoid too much output
-    # Use separate SPOTDL_LOG_LEVEL or default to same as LOG_LEVEL
     spotdl_log_level = os.environ.get('SPOTDL_LOG_LEVEL', os.environ.get('LOG_LEVEL', 'INFO')).upper()
     
     # Get cookie file path if provided
@@ -50,23 +81,25 @@ def ensureLocalFiles(sp: spotipy.Spotify, playlist: dict):
         
         logging.info(f"[{idx}/{len(spotifyTracks)}] Processing: {artist_name} - {track_name}")
         
-        # Check if file already exists with flexible matching
-        # Look for any file matching "artist - title.mp3" (case-insensitive, ignore special chars)
-        artist_pattern = artist_name.replace('/', '').replace('_', '').replace(' ', '').lower()
-        track_pattern = track_name.replace('/', '').replace('_', '').replace(' ', '').lower()
+        # Search for existing file in music library (up to 2 levels deep)
+        existing_file = find_existing_file(music_path, artist_name, track_name, max_depth=2)
         
-        file_exists = False
-        for existing_file in glob.glob(os.path.join(playlist_folder, '*.mp3')):
-            filename = os.path.basename(existing_file).lower()
-            # Remove special chars and spaces for comparison
-            normalized = filename.replace('/', '').replace('_', '').replace(' ', '')
+        if existing_file:
+            logging.info(f"✓ Found existing file: {existing_file}")
             
-            if artist_pattern in normalized and track_pattern in normalized:
-                logging.info(f"✓ File already exists: {os.path.basename(existing_file)}")
-                file_exists = True
-                break
-        
-        if file_exists:
+            # Copy to playlist folder if not already there
+            if not existing_file.startswith(playlist_folder):
+                try:
+                    import shutil
+                    dest_filename = f"{artist_name.replace('/', '_')} - {track_name.replace('/', '_')}.mp3"
+                    dest_path = os.path.join(playlist_folder, dest_filename)
+                    
+                    if not os.path.exists(dest_path):
+                        shutil.copy2(existing_file, dest_path)
+                        logging.info(f"📋 Copied to playlist folder: {dest_filename}")
+                    
+                except Exception as e:
+                    logging.warning(f"⚠️  Failed to copy file: {e}")
             continue
         
         # Download the track
@@ -107,16 +140,15 @@ def ensureLocalFiles(sp: spotipy.Spotify, playlist: dict):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
-                bufsize=0,  # Unbuffered
+                bufsize=0,
                 universal_newlines=True,
-                env={**os.environ, 'PYTHONUNBUFFERED': '1'}  # Force Python unbuffered
+                env={**os.environ, 'PYTHONUNBUFFERED': '1'}
             )
             
             # Print output in real-time
             for line in iter(process.stdout.readline, ''):
                 if line:
                     line = line.rstrip()
-                    # Filter out empty lines
                     if line.strip():
                         logging.info(f"  spotdl: {line}")
             
@@ -126,16 +158,16 @@ def ensureLocalFiles(sp: spotipy.Spotify, playlist: dict):
             logging.info("=" * 60)
             
             if return_code == 0:
-                # Find the downloaded file (spotdl may name it differently)
-                new_files = glob.glob(os.path.join(playlist_folder, '*.mp3'))
-                # Look for files modified in the last 10 seconds
-                import time as time_module
+                # Find the downloaded file
+                artist_norm = artist_name.replace('/', '').replace('_', '').replace(' ', '').lower()
+                track_norm = track_name.replace('/', '').replace('_', '').replace(' ', '').lower()
+                
                 recent_file = None
-                for f in new_files:
-                    if time_module.time() - os.path.getmtime(f) < 10:
+                for f in glob.glob(os.path.join(playlist_folder, '*.mp3')):
+                    if time.time() - os.path.getmtime(f) < 10:
                         filename = os.path.basename(f).lower()
                         normalized = filename.replace('/', '').replace('_', '').replace(' ', '')
-                        if artist_pattern in normalized and track_pattern in normalized:
+                        if artist_norm in normalized and track_norm in normalized:
                             recent_file = f
                             break
                 
@@ -143,7 +175,7 @@ def ensureLocalFiles(sp: spotipy.Spotify, playlist: dict):
                     file_size = os.path.getsize(recent_file) / (1024 * 1024)
                     logging.info(f"✓ Downloaded: {os.path.basename(recent_file)} ({file_size:.2f} MB)")
                     
-                    # Tag the file
+                    # Tag the file (suppress warnings)
                     try:
                         audiofile = eyed3.load(recent_file)
                         if audiofile:
@@ -155,7 +187,7 @@ def ensureLocalFiles(sp: spotipy.Spotify, playlist: dict):
                             audiofile.tag.save()
                             logging.info(f"✓ Tagged successfully")
                     except Exception as e:
-                        logging.warning(f"⚠️  Failed to tag: {str(e)}")
+                        logging.debug(f"Tagging issue (non-critical): {str(e)}")
                 else:
                     logging.warning(f"⚠️  Download completed but file not found")
             else:
