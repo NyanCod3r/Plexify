@@ -1,5 +1,5 @@
 plexapi==4.17.1
-spotipy==2.25.1
+spotipy==2.25.2
 eyed3==0.9.8
 spotdl==4.4.3
 pytest==8.3.5
