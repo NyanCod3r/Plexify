@@ -10,6 +10,7 @@ Key functions:
 - runSync: Main entry point to start the synchronization.
 - dumpSpotifyPlaylists: Fetches and saves Spotify playlists to a JSON file.
 - diffAndSyncPlaylists: Compares Spotify and Plex playlists and syncs them.
+- parseSpotifyURI: Parses Spotify URIs into components.
 """
 
 import os
@@ -21,6 +22,30 @@ from spotify_utils import getSpotifyUserPlaylists, getSpotifyPlaylist
 from plex_utils import ensureLocalFiles
 
 CACHE_FILE = 'spotify_playlists.json'
+
+def parseSpotifyURI(uri: str) -> Dict:
+    """
+    Parses a Spotify URI into its components.
+    
+    Examples:
+    - spotify:user:USERNAME -> {'user': 'USERNAME'}
+    - spotify:playlist:PLAYLIST_ID -> {'playlist': 'PLAYLIST_ID'}
+    
+    Args:
+        uri: Spotify URI string
+        
+    Returns:
+        Dictionary with parsed URI components
+    """
+    parts = uri.split(':')
+    if len(parts) < 3:
+        logging.warning(f"Invalid Spotify URI format: {uri}")
+        return {}
+    
+    uri_type = parts[1]  # 'user' or 'playlist'
+    uri_id = parts[2]     # username or playlist ID
+    
+    return {uri_type: uri_id}
 
 def load_cached_playlists() -> List[Dict]:
     if os.path.exists(CACHE_FILE):

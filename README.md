@@ -212,20 +212,20 @@ docker run -d \
 
 ```
 MUSIC_PATH/
-├── Stoner.Blues.Rock/           (Playlist 1 = Plex Library 1)
+├── Stoner.Blues.Rock/                    (Playlist 1 = Plex Library 1)
 │   ├── Black Sabbath/
 │   │   ├── Paranoid/
-│   │   │   ├── War Pigs.mp3      (or .flac, .m4a, etc.)
-│   │   │   └── Paranoid.flac
+│   │   │   ├── Black Sabbath - War Pigs.mp3
+│   │   │   └── Black Sabbath - Paranoid.flac
 │   │   └── Master of Reality/
-│   │       └── Sweet Leaf.mp3
+│   │       └── Black Sabbath - Sweet Leaf.mp3
 │   └── Kyuss/
 │       └── Blues for the Red Sun/
-│           └── Thumb.mp3
-└── Chill.Vibes/                 (Playlist 2 = Plex Library 2)
+│           └── Kyuss - Thumb.mp3
+└── Chill.Vibes/                          (Playlist 2 = Plex Library 2)
     └── Tycho/
         └── Dive/
-            └── A Walk.m4a
+            └── Tycho - A Walk.m4a
 ```
 
 **Structure explained:**
@@ -233,17 +233,17 @@ MUSIC_PATH/
 2. **Level 2:** Spotify playlist name (sanitized for filesystem) - **This must match your Plex library name**
 3. **Level 3:** Artist name from track metadata
 4. **Level 4:** Album name from track metadata
-5. **Level 5:** Track file in any supported format (`.mp3`, `.flac`, `.m4a`, `.opus`, `.ogg`, `.wav`)
+5. **Level 5:** Track file: `Artist - Track.extension` (supports `.mp3`, `.flac`, `.m4a`, `.opus`, `.ogg`, `.wav`)
 
-**File naming:** All files follow the pattern `Artist - Track.extension`
+**File naming convention:** `Artist - Track.extension`
 
 This structure allows you to:
 - Create Plex libraries that map directly to Spotify playlists
 - Enable 1-star deletion (library name = playlist name = folder name)
 - Create Plex Smart Playlists per Spotify playlist (`Folder contains /music/Stoner.Blues.Rock`)
 - Mix different audio formats - Plexify won't re-download if any format exists
-- Group all music together while keeping playlists organized
-- Easily identify which playlist a track belongs to
+- Identify tracks easily: artist name is always in the filename
+- Avoid filename collisions when multiple artists have same track names
 
 ---
 
