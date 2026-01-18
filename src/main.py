@@ -71,7 +71,7 @@ def main():
             logging.info(f"⏰ Waiting {seconds_to_wait} seconds before next sync...")
             time.sleep(seconds_to_wait)
         except KeyboardInterrupt:
-            logging.info("👋 Shutting down Plexify.")
+            logging.info("👋 Shutting down Plexify.") 
             break
         except Exception as e:
             logging.error(f"💥 Error in main loop: {e}")
