@@ -9,10 +9,12 @@ import os
 import logging
 import time
 import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
+from spotipy.oauth2 import SpotifyOAuth
 from plexapi.server import PlexServer
-from spotify_utils import parseSpotifyURI
-from utils import runSync
+
+from utils import runSync, parseSpotifyURI
+from plex_utils import get_one_star_tracks, delete_plex_track
+from spotify_utils import removeTrackFromPlaylist
 
 # Configure logging
 log_level = os.environ.get('LOG_LEVEL', 'INFO').upper()
@@ -24,67 +26,143 @@ logging.basicConfig(
 logging.info("Starting Plexify...")
 
 # Entry point of the application
-if __name__ == '__main__':
-    # Set up Spotify client credentials
-    try:
-        client_id = os.environ.get('SPOTIPY_CLIENT_ID')
-        client_secret = os.environ.get('SPOTIPY_CLIENT_SECRET')
+def main():
+    spotify_client_id = os.environ.get('SPOTIPY_CLIENT_ID')
+    spotify_client_secret = os.environ.get('SPOTIPY_CLIENT_SECRET')
+    spotify_uris = os.environ.get('SPOTIFY_URIS', '').split(',')
 
-        if not client_id or not client_secret:
-            logging.error("SPOTIPY_CLIENT_ID or SPOTIPY_CLIENT_SECRET not set.")
-            exit(1)
+    if not spotify_client_id or not spotify_client_secret:
+        logging.error("Spotify credentials not set. Exiting.")
+        return
 
-        auth_manager = SpotifyClientCredentials(
-            client_id=client_id,
-            client_secret=client_secret
-        )
-        sp = spotipy.Spotify(auth_manager=auth_manager)
-        logging.info("Successfully authenticated with Spotify.")
-    except Exception as e:
-        logging.error(f"Failed to authenticate with Spotify: {e}")
-        exit(1)
+    if not spotify_uris or spotify_uris == ['']:
+        logging.error("SPOTIFY_URIS not set. Exiting.")
+        return
 
-    # Set up Plex server connection
-    try:
-        plex_url = os.environ.get('PLEX_URL')
-        plex_token = os.environ.get('PLEX_TOKEN')
-        if not plex_url or not plex_token:
-            logging.error("PLEX_URL or PLEX_TOKEN not set.")
-            exit(1)
-        plex = PlexServer(plex_url, plex_token)
-        logging.info("Successfully connected to Plex.")
-    except Exception as e:
-        logging.error(f"Failed to connect to Plex: {e}")
-        exit(1)
+    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
+        client_id=spotify_client_id,
+        client_secret=spotify_client_secret,
+        redirect_uri='http://localhost:8888/callback',
+        scope='playlist-read-private playlist-read-collaborative playlist-modify-private playlist-modify-public'
+    ))
 
-    # Parse Spotify URIs
-    spotify_uris_str = os.environ.get('SPOTIFY_URIS', '')
-    spotify_uris = []
+    logging.info("Successfully authenticated with Spotify.")
 
-    if spotify_uris_str:
-        for uri_str in spotify_uris_str.split(','):
-            uri_str = uri_str.strip()
-            if uri_str:
-                parsed_uri = parseSpotifyURI(uri_str)
-                if parsed_uri:
-                    spotify_uris.append(parsed_uri)
-                    logging.debug(f"Parsed URI: {parsed_uri}")
+    plex_url = os.environ.get('PLEX_URL')
+    plex_token = os.environ.get('PLEX_TOKEN')
 
-    if not spotify_uris:
-        logging.error("No valid Spotify URIs provided in SPOTIFY_URIS.")
-        exit(1)
+    if not plex_url or not plex_token:
+        logging.error("Plex credentials not set. Exiting.")
+        return
 
-    # Get sync interval
-    secondsToWait = int(os.environ.get('SECONDS_TO_WAIT', 3600))
-    first_run = True
+    plex = PlexServer(plex_url, plex_token)
+    logging.info("Successfully connected to Plex.")
 
-    # Main sync loop
+    parsed_uris = [parseSpotifyURI(uri.strip()) for uri in spotify_uris]
+    seconds_to_wait = int(os.environ.get('SECONDS_TO_WAIT', 3600))
+
     while True:
         try:
-            runSync(sp, spotify_uris, force_refresh=first_run)
-            first_run = False
+            # Sync playlists from Spotify
+            synced_playlists = runSync(sp, parsed_uris)
+            
+            # Process 1-star deletions for each synced playlist
+            process_one_star_deletions(plex, sp, synced_playlists)
+            
+            logging.info(f"Waiting {seconds_to_wait} seconds before next sync...")
+            time.sleep(seconds_to_wait)
+        except KeyboardInterrupt:
+            logging.info("Shutting down Plexify.")
+            break
         except Exception as e:
-            logging.error(f"Sync error: {e}")
+            logging.error(f"Error in main loop: {e}")
+            time.sleep(60)
 
-        logging.info(f"Waiting {secondsToWait} seconds before next sync...")
-        time.sleep(secondsToWait)
+def process_one_star_deletions(plex: PlexServer, sp: spotipy.Spotify, playlists: list):
+    """
+    Check all Plex libraries for 1-star rated tracks and remove them from both Plex and Spotify.
+    """
+    logging.info("Checking for 1-star rated tracks across all playlists...")
+    
+    total_deleted = 0
+    
+    for playlist in playlists:
+        playlist_name = playlist.get('name', 'Unknown')
+        playlist_id = playlist.get('id')
+        
+        if not playlist_id:
+            logging.warning(f"Skipping playlist '{playlist_name}' - no ID found")
+            continue
+        
+        # Get 1-star tracks from Plex library (library name = playlist name)
+        one_star_tracks = get_one_star_tracks(plex, playlist_name)
+        
+        if not one_star_tracks:
+            logging.debug(f"No 1-star tracks found in playlist: {playlist_name}")
+            continue
+        
+        logging.info(f"Found {len(one_star_tracks)} 1-star tracks in '{playlist_name}'")
+        
+        for track_info in one_star_tracks:
+            plex_track = track_info['plex_track']
+            track_title = track_info['title']
+            track_artist = track_info['artist']
+            
+            # Find matching Spotify track in the playlist
+            spotify_track_id = find_spotify_track_in_playlist(sp, playlist, track_title, track_artist)
+            
+            if spotify_track_id:
+                # Remove from Spotify playlist
+                try:
+                    removeTrackFromPlaylist(sp, playlist_id, spotify_track_id)
+                    logging.info(f"Removed '{track_artist} - {track_title}' from Spotify playlist '{playlist_name}'")
+                except Exception as e:
+                    logging.error(f"Failed to remove from Spotify: {e}")
+                    continue
+            else:
+                logging.warning(f"Could not find '{track_artist} - {track_title}' in Spotify playlist '{playlist_name}'")
+            
+            # Delete from Plex library and filesystem
+            try:
+                delete_plex_track(plex_track)
+                total_deleted += 1
+            except Exception as e:
+                logging.error(f"Failed to delete from Plex: {e}")
+    
+    if total_deleted > 0:
+        logging.info(f"Completed 1-star cleanup: {total_deleted} tracks deleted")
+    else:
+        logging.info("No 1-star tracks to delete")
+
+def find_spotify_track_in_playlist(sp: spotipy.Spotify, playlist: dict, track_title: str, track_artist: str) -> str:
+    """
+    Find a Spotify track ID in a playlist by matching title and artist.
+    Returns the track ID if found, None otherwise.
+    """
+    tracks = playlist.get('tracks', {}).get('items', [])
+    
+    # Normalize strings for comparison
+    normalized_title = track_title.lower().strip()
+    normalized_artist = track_artist.lower().strip()
+    
+    for item in tracks:
+        track = item.get('track')
+        if not track:
+            continue
+        
+        spotify_title = track.get('name', '').lower().strip()
+        spotify_artists = track.get('artists', [])
+        
+        # Check if title matches
+        if normalized_title != spotify_title:
+            continue
+        
+        # Check if any artist matches
+        for artist in spotify_artists:
+            if normalized_artist == artist.get('name', '').lower().strip():
+                return track.get('id')
+    
+    return None
+
+if __name__ == '__main__':
+    main()
