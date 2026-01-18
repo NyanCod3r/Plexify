@@ -10,6 +10,7 @@ import logging
 import time
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
+from plexapi.server import PlexServer
 from spotify_utils import parseSpotifyURI
 from utils import runSync
 
@@ -43,6 +44,19 @@ if __name__ == '__main__':
         logging.error(f"Failed to authenticate with Spotify: {e}")
         exit(1)
 
+    # Set up Plex server connection
+    try:
+        plex_url = os.environ.get('PLEX_URL')
+        plex_token = os.environ.get('PLEX_TOKEN')
+        if not plex_url or not plex_token:
+            logging.error("PLEX_URL or PLEX_TOKEN not set.")
+            exit(1)
+        plex = PlexServer(plex_url, plex_token)
+        logging.info("Successfully connected to Plex.")
+    except Exception as e:
+        logging.error(f"Failed to connect to Plex: {e}")
+        exit(1)
+
     # Parse Spotify URIs
     spotify_uris_str = os.environ.get('SPOTIFY_URIS', '')
     spotify_uris = []
@@ -62,11 +76,13 @@ if __name__ == '__main__':
 
     # Get sync interval
     secondsToWait = int(os.environ.get('SECONDS_TO_WAIT', 3600))
+    first_run = True
 
     # Main sync loop
     while True:
         try:
-            runSync(sp, spotify_uris)
+            runSync(sp, spotify_uris, force_refresh=first_run)
+            first_run = False
         except Exception as e:
             logging.error(f"Sync error: {e}")
 
