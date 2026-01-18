@@ -9,6 +9,10 @@ warnings.filterwarnings('ignore', module='eyed3.id3.frames')
 import logging
 import os
 import subprocess
+import time
+
+# Rate limiting: max 20 requests/second = 1 request per 0.05 seconds
+DOWNLOAD_DELAY = float(os.environ.get('DOWNLOAD_DELAY', '0.05'))
 
 def ensureLocalFiles(sp, playlist: dict):
     """
@@ -54,32 +58,48 @@ def ensureLocalFiles(sp, playlist: dict):
             logging.debug(f"Track already exists: {trackPath}")
             continue
         
-        track_url = track.get('external_urls', {}).get('spotify')
-        if track_url:
-            download_queue.append((track_url, albumFolder, trackName, artistName))
+        # Use search query instead of Spotify URL to reduce API calls
+        search_query = f"{artistName} - {trackName}"
+        download_queue.append((search_query, albumFolder, trackName, artistName))
     
     if download_queue:
         logging.info(f"Downloading {len(download_queue)} missing tracks...")
-        for track_url, output_folder, track_name, artist_name in download_queue:
-            downloadSpotifyTrack(track_url, output_folder, track_name, artist_name)
+        logging.info(f"Rate limiting enabled: {DOWNLOAD_DELAY}s delay between downloads")
+        
+        for idx, (search_query, output_folder, track_name, artist_name) in enumerate(download_queue, 1):
+            downloadSpotifyTrack(search_query, output_folder, track_name, artist_name)
+            
+            # Rate limiting: wait between downloads
+            if idx < len(download_queue):
+                time.sleep(DOWNLOAD_DELAY)
+                
+        logging.info(f"Completed downloading {len(download_queue)} tracks")
     else:
         logging.info(f"All tracks already present for playlist: {playlistName}")
 
-def downloadSpotifyTrack(track_url: str, output_folder: str, track_name: str, artist_name: str):
+def downloadSpotifyTrack(search_query: str, output_folder: str, track_name: str, artist_name: str):
     """
-    Downloads a single Spotify track using spotdl with visible output.
+    Downloads a single track using spotdl with search query instead of URL.
+    This reduces Spotify API calls from spotdl.
     """
     spotdl_log_level = os.environ.get('SPOTDL_LOG_LEVEL', os.environ.get('LOG_LEVEL', 'INFO'))
+    client_id = os.environ.get('SPOTIPY_CLIENT_ID')
+    client_secret = os.environ.get('SPOTIPY_CLIENT_SECRET')
     
     try:
         cmd = [
             'spotdl',
-            track_url,
+            search_query,
             '--output', output_folder,
             '--format', 'mp3',
             '--bitrate', '320k',
             '--log-level', spotdl_log_level
         ]
+        
+        # Pass Spotify credentials to spotdl
+        if client_id and client_secret:
+            cmd.extend(['--client-id', client_id])
+            cmd.extend(['--client-secret', client_secret])
         
         logging.info(f"Downloading: {artist_name} - {track_name}")
         
