@@ -14,18 +14,20 @@ Plexify automatically syncs Spotify playlists to your local filesystem, download
 - **📦 Smart File Organization** - Files organized as `MUSIC_PATH/<Playlist>/<Artist>/<Album>/<Track>.mp3`
 - **💾 Intelligent Caching** - Uses `snapshot_id` to detect playlist changes and minimize API calls
 - **🔄 Continuous Sync** - Runs in a loop with configurable wait time between syncs
-- **🎧 High-Quality Downloads** - Downloads tracks at 320kbps using spotdl
+- **🎧 High-Quality Downloads** - Downloads tracks using spotdl (MP3 format)
+- **🎼 Format-Agnostic Detection** - Skips downloads if track exists in any audio format (mp3, flac, m4a, opus, ogg, wav)
 - **🏷️ Metadata Tagging** - Automatically tags downloaded files with artist, track, and album information
 - **📊 Detailed Logging** - Configurable log levels for both application and spotdl
 - **⚡ Rate Limit Protection** - Built-in retry logic with exponential backoff for API calls and download delays
 - **🔑 Credential Passthrough** - Automatically passes your Spotify credentials to spotdl to prevent rate limiting
 - **🐳 Docker Support** - Ready-to-use Docker container for easy deployment
+- **⭐ 1-Star Rating Cleanup** - Automatically remove tracks rated 1-star in Plex from Spotify playlists and local storage
 
 ### 🚧 Coming Soon
 
-- **⭐ 1-Star Rating Cleanup** - Automatically remove tracks rated 1-star in Plex from Spotify playlists and local storage
-- **🔍 Smart File Discovery** - Search existing music library before downloading duplicates
-- **📋 Multi-Format Support** - Support for FLAC and other audio formats
+- **🔄 Resume Failed Downloads** - Retry tracks that failed to download
+- **📈 Download Statistics** - Track counts, storage usage per playlist
+- **🎛️ Configurable File Naming** - Custom filename patterns
 
 ---
 
@@ -40,9 +42,10 @@ Plexify automatically syncs Spotify playlists to your local filesystem, download
 **NEW APPROACH:**
 - ✅ Downloads tracks to `MUSIC_PATH/<Playlist>/<Artist>/<Album>/`
 - ✅ Smart playlist caching with snapshot-based change detection
-- ✅ **Plex library sections must match Spotify playlist names** for future 1-star deletion feature
+- ✅ **Plex library sections must match Spotify playlist names** for 1-star deletion feature
 - ✅ **Spotify credentials automatically passed to spotdl** to prevent rate limiting
 - ✅ **Configurable download delays** to respect Spotify API rate limits (20 req/sec max)
+- ✅ **Format-agnostic file detection** - Won't re-download if FLAC or other formats exist
 - ✅ You create Plex Smart Playlists manually (one-time setup)
 - ✅ Plex Smart Playlists auto-update based on folder contents
 
@@ -52,7 +55,7 @@ Plexify automatically syncs Spotify playlists to your local filesystem, download
 
 ## 🎯 Plex Library Setup (Important!)
 
-**For the upcoming 1-star deletion feature to work, your Plex library structure must match Spotify playlist names.**
+**For the 1-star deletion feature to work, your Plex library structure must match Spotify playlist names.**
 
 ### Recommended Setup:
 
@@ -64,8 +67,8 @@ Plexify automatically syncs Spotify playlists to your local filesystem, download
    - Library `Stoner.Blues.Rock` → Folder `/data/Music/Stoner.Blues.Rock`
    - Library `Chill.Vibes` → Folder `/data/Music/Chill.Vibes`
 
-3. **Why this matters:**
-   - When you rate a track 1-star in Plex, the app will know which Spotify playlist to remove it from
+3. **How it works:**
+   - When you rate a track 1-star in Plex, the app knows which Spotify playlist to remove it from
    - The library name acts as the link between Plex and Spotify
    - Without matching names, 1-star deletion won't work
 
@@ -212,8 +215,8 @@ MUSIC_PATH/
 ├── Stoner.Blues.Rock/           (Playlist 1 = Plex Library 1)
 │   ├── Black Sabbath/
 │   │   ├── Paranoid/
-│   │   │   ├── War Pigs.mp3
-│   │   │   └── Paranoid.mp3
+│   │   │   ├── War Pigs.mp3      (or .flac, .m4a, etc.)
+│   │   │   └── Paranoid.flac
 │   │   └── Master of Reality/
 │   │       └── Sweet Leaf.mp3
 │   └── Kyuss/
@@ -222,7 +225,7 @@ MUSIC_PATH/
 └── Chill.Vibes/                 (Playlist 2 = Plex Library 2)
     └── Tycho/
         └── Dive/
-            └── A Walk.mp3
+            └── A Walk.m4a
 ```
 
 **Structure explained:**
@@ -230,12 +233,15 @@ MUSIC_PATH/
 2. **Level 2:** Spotify playlist name (sanitized for filesystem) - **This must match your Plex library name**
 3. **Level 3:** Artist name from track metadata
 4. **Level 4:** Album name from track metadata
-5. **Level 5:** Track file (`.mp3` or `.flac`)
+5. **Level 5:** Track file in any supported format (`.mp3`, `.flac`, `.m4a`, `.opus`, `.ogg`, `.wav`)
+
+**File naming:** All files follow the pattern `Artist - Track.extension`
 
 This structure allows you to:
 - Create Plex libraries that map directly to Spotify playlists
-- Enable future 1-star deletion (library name = playlist name = folder name)
+- Enable 1-star deletion (library name = playlist name = folder name)
 - Create Plex Smart Playlists per Spotify playlist (`Folder contains /music/Stoner.Blues.Rock`)
+- Mix different audio formats - Plexify won't re-download if any format exists
 - Group all music together while keeping playlists organized
 - Easily identify which playlist a track belongs to
 
@@ -267,6 +273,24 @@ Multiple layers of protection against Spotify API rate limits:
 - Recommended: Max 20 requests per second
 - Error code: 429 (Too Many Requests)
 
+### 🎼 Format-Agnostic File Detection
+
+Before downloading a track, Plexify checks if it already exists in **any** supported audio format:
+- `.mp3` - MPEG Audio Layer 3
+- `.flac` - Free Lossless Audio Codec
+- `.m4a` - MPEG-4 Audio
+- `.opus` - Opus Interactive Audio Codec
+- `.ogg` - Ogg Vorbis
+- `.wav` - Waveform Audio File Format
+
+**Example scenario:**
+- Playlist has "Black Sabbath - War Pigs"
+- You already have `War Pigs.flac` in your library
+- Plexify detects the FLAC file and **skips** the MP3 download
+- No duplicate files, saves bandwidth and storage
+
+This is especially useful if you've manually added high-quality FLAC files and don't want them replaced with MP3s.
+
 ### 🎵 Intelligent File Organization
 Files are organized using Spotify metadata with a 4-level hierarchy:
 - Playlist name (sanitized)
@@ -274,10 +298,13 @@ Files are organized using Spotify metadata with a 4-level hierarchy:
 - Album name from track metadata
 - Track name with sanitized filenames (removes invalid characters: `< > : " / \ | ? *`)
 
+**File naming convention:** `Artist - Track.extension`
+
 Examples:
 - `AC/DC` becomes `AC_DC`
 - `Stoner.Blues.Rock` becomes `Stoner.Blues.Rock` (dots are valid)
 - `My Playlist: Best Of` becomes `My Playlist_ Best Of`
+- File: `Black Sabbath - War Pigs.mp3`
 
 ### 🏷️ Metadata Tagging
 All downloaded files are automatically tagged with:
@@ -289,23 +316,28 @@ All downloaded files are automatically tagged with:
 ### 📦 Plex Library Compatibility
 The `<Playlist>/<Artist>/<Album>/<Track>` structure allows precise Plex Smart Playlist targeting. Point your Plex library at `MUSIC_PATH` and all playlists will be available for filtering.
 
----
+### ⭐ 1-Star Rating Cleanup
 
-## 🚧 Upcoming Feature: ⭐ 1-Star Rating Cleanup
-
-**Status:** Implemented but not yet enabled in sync loop
+**Status:** Fully implemented and enabled
 
 When you rate a track 1-star in Plex, Plexify will:
-1. Find which Plex library the track belongs to (e.g., `Stoner.Blues.Rock`)
-2. Remove it from the corresponding Spotify playlist
-3. Delete the track from your Plex library
-4. Delete the local file
+1. Detect the 1-star rating during the next sync cycle
+2. Find which Plex library the track belongs to (e.g., `Stoner.Blues.Rock`)
+3. Match the track in the corresponding Spotify playlist by title and artist
+4. Remove it from the Spotify playlist via API
+5. Delete the track from your Plex library
+6. Delete the local file from the filesystem
 
 **Requirements:**
 - Plex library name must exactly match Spotify playlist name
 - Track must exist in the corresponding Spotify playlist
+- Track matching is done by normalized title and artist name (case-insensitive)
 
-**Why disabled?** This feature needs additional testing and user configuration options before being enabled by default.
+**Usage:**
+1. Play a track in Plex you want to remove
+2. Rate it 1-star (2 thumbs down)
+3. Wait for next sync cycle (or restart Plexify)
+4. Track will be automatically removed from everywhere
 
 ---
 
@@ -315,7 +347,7 @@ When you rate a track 1-star in Plex, Plexify will:
 - Environment variables changed: `SPOTIFY_CLIENT_ID` → `SPOTIPY_CLIENT_ID`
 - Plex playlist management removed (use Plex Smart Playlists instead)
 - File organization changed to `<Playlist>/<Artist>/<Album>/<Track>` structure (added playlist folder level)
-- **Plex libraries must now be named to match Spotify playlists** for future 1-star deletion
+- **Plex libraries must now be named to match Spotify playlists** for 1-star deletion
 - Removed bidirectional sync for Discover Weekly/Release Radar
 - Added required `PLEX_URL` and `PLEX_TOKEN` variables
 - Added `DOWNLOAD_DELAY` for rate limit control
@@ -333,7 +365,7 @@ When you rate a track 1-star in Plex, Plexify will:
 5. **Create new Plex libraries with names matching Spotify playlists** (see Plex Library Setup section)
 6. Create Plex Smart Playlists to replace old automatic playlists
 7. Remove any old Docker volumes or cache files (`spotify_playlists.json` will be recreated)
-8. First run will re-download metadata but skip existing files
+8. First run will re-download metadata but skip existing files (including FLAC/M4A)
 9. **File reorganization:** Existing files in `<Artist>/<Album>/` will not be moved. New structure is `<Playlist>/<Artist>/<Album>/`. Consider reorganizing manually or starting fresh.
 
 ---
@@ -348,9 +380,10 @@ When you rate a track 1-star in Plex, Plexify will:
 **Solutions:**
 1. **✅ Verify your credentials are being used:**
    ```bash
-   # Check spotdl is receiving credentials
-   ps aux | grep spotdl
-   # You should see --client-id and --client-secret in the command
+   # Set LOG_LEVEL to DEBUG
+   export LOG_LEVEL="DEBUG"
+   # Run Plexify and check logs for:
+   # "DEBUG: Passing credentials to spotdl: client_id=abcd1234..."
    ```
 
 2. **Create your own Spotify credentials** if using shared/public keys:

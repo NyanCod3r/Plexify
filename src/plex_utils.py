@@ -14,6 +14,9 @@ import time
 # Rate limiting: max 20 requests/second = 1 request per 0.05 seconds
 DOWNLOAD_DELAY = float(os.environ.get('DOWNLOAD_DELAY', '0.05'))
 
+# Supported audio formats to check for existing files
+SUPPORTED_FORMATS = ['.mp3', '.flac', '.m4a', '.opus', '.ogg', '.wav']
+
 def ensureLocalFiles(sp, playlist: dict):
     """
     Ensures that all tracks in a Spotify playlist are downloaded locally.
@@ -52,10 +55,9 @@ def ensureLocalFiles(sp, playlist: dict):
         albumFolder = os.path.join(artistFolder, safeAlbum)
         createFolder(albumFolder)
         
-        trackPath = os.path.join(albumFolder, f"{safeTrack}.mp3")
-        
-        if os.path.exists(trackPath):
-            logging.debug(f"Track already exists: {trackPath}")
+        # Check if track exists in any supported format
+        if track_exists_in_any_format(albumFolder, safeTrack):
+            logging.debug(f"Track already exists: {safeTrack} (in some audio format)")
             continue
         
         # Use search query instead of Spotify URL to reduce API calls
@@ -76,6 +78,18 @@ def ensureLocalFiles(sp, playlist: dict):
         logging.info(f"Completed downloading {len(download_queue)} tracks")
     else:
         logging.info(f"All tracks already present for playlist: {playlistName}")
+
+def track_exists_in_any_format(folder: str, track_name: str) -> bool:
+    """
+    Check if a track file exists in any supported audio format.
+    Returns True if found, False otherwise.
+    """
+    for ext in SUPPORTED_FORMATS:
+        file_path = os.path.join(folder, f"{track_name}{ext}")
+        if os.path.exists(file_path):
+            logging.debug(f"Found existing file: {track_name}{ext}")
+            return True
+    return False
 
 def downloadSpotifyTrack(search_query: str, output_folder: str, track_name: str, artist_name: str):
     """
