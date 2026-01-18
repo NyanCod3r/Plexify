@@ -17,7 +17,8 @@ Plexify automatically syncs Spotify playlists to your local filesystem, download
 - **🎧 High-Quality Downloads** - Downloads tracks at 320kbps using spotdl
 - **🏷️ Metadata Tagging** - Automatically tags downloaded files with artist, track, and album information
 - **📊 Detailed Logging** - Configurable log levels for both application and spotdl
-- **⚡ Rate Limit Protection** - Built-in retry logic with exponential backoff for API calls
+- **⚡ Rate Limit Protection** - Built-in retry logic with exponential backoff for API calls and download delays
+- **🔑 Credential Passthrough** - Automatically passes your Spotify credentials to spotdl to prevent rate limiting
 - **🐳 Docker Support** - Ready-to-use Docker container for easy deployment
 
 ### 🚧 Coming Soon
@@ -40,6 +41,8 @@ Plexify automatically syncs Spotify playlists to your local filesystem, download
 - ✅ Downloads tracks to `MUSIC_PATH/<Playlist>/<Artist>/<Album>/`
 - ✅ Smart playlist caching with snapshot-based change detection
 - ✅ **Plex library sections must match Spotify playlist names** for future 1-star deletion feature
+- ✅ **Spotify credentials automatically passed to spotdl** to prevent rate limiting
+- ✅ **Configurable download delays** to respect Spotify API rate limits (20 req/sec max)
 - ✅ You create Plex Smart Playlists manually (one-time setup)
 - ✅ Plex Smart Playlists auto-update based on folder contents
 
@@ -126,11 +129,18 @@ As Plexify downloads new tracks, your Smart Playlists auto-update. No API calls 
 | `SECONDS_TO_WAIT` | Seconds to wait between sync cycles. | No | `3600` |
 | `LOG_LEVEL` | Python logging level (DEBUG, INFO, WARNING, ERROR). | No | `INFO` |
 | `SPOTDL_LOG_LEVEL` | spotdl logging level (separate from LOG_LEVEL). | No | Same as `LOG_LEVEL` |
+| `DOWNLOAD_DELAY` | Seconds to wait between track downloads (rate limiting). | No | `0.05` |
 
-### New Environment Variables Explained
+### Environment Variables Explained
+
+**`SPOTIPY_CLIENT_ID` & `SPOTIPY_CLIENT_SECRET`**  
+Your personal Spotify API credentials. These are automatically passed to spotdl to prevent rate limiting. Without your own credentials, spotdl uses public/shared keys that quickly hit rate limits.
 
 **`SPOTDL_LOG_LEVEL`**  
 Controls verbosity of spotdl output. Set to `DEBUG` to see detailed download progress, or `INFO` for cleaner logs. If not set, inherits from `LOG_LEVEL`.
+
+**`DOWNLOAD_DELAY`**  
+Time to wait between each track download. Default is `0.05` seconds (20 requests/second), which respects Spotify's recommended rate limit of ~180 requests/minute. Increase this value if you still encounter rate limiting (e.g., `0.1` for 10 req/sec).
 
 **Example SPOTIFY_URIS:**
 ```
@@ -139,10 +149,14 @@ spotify:user:USERNAME,spotify:playlist:PLAYLIST_ID,spotify:playlist:ANOTHER_ID
 
 ### Getting Your Spotify Credentials
 
+**⚠️ Important: Use your own credentials to avoid rate limiting!**
+
 1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 2. Create a new app
 3. Copy your Client ID and Client Secret
 4. Set redirect URI to `http://localhost:8888/callback`
+
+Your credentials are passed to spotdl automatically - no manual configuration needed.
 
 ### Getting Your Plex Token
 
@@ -166,6 +180,7 @@ export MUSIC_PATH="/data/Music"
 export PLEX_URL="http://localhost:32400"
 export PLEX_TOKEN="your_plex_token"
 export LOG_LEVEL="INFO"
+export DOWNLOAD_DELAY="0.05"  # Optional: 20 req/sec (default)
 
 python src/main.py
 ```
@@ -183,6 +198,7 @@ docker run -d \
   -e PLEX_TOKEN="your_plex_token" \
   -e LOG_LEVEL="INFO" \
   -e SPOTDL_LOG_LEVEL="INFO" \
+  -e DOWNLOAD_DELAY="0.05" \
   -v /path/to/your/music:/music \
   nyancod3r/plexify:latest
 ```
@@ -237,6 +253,20 @@ Plexify uses Spotify's `snapshot_id` to detect playlist changes. This dramatical
 
 This prevents rate limiting and saves bandwidth.
 
+### ⚡ Rate Limit Protection
+Multiple layers of protection against Spotify API rate limits:
+
+1. **Credential Passthrough**: Your `SPOTIPY_CLIENT_ID` and `SPOTIPY_CLIENT_SECRET` are automatically passed to spotdl via command-line arguments
+2. **Download Delays**: Configurable delay between downloads (default 0.05s = 20 req/sec)
+3. **Exponential Backoff**: Built-in retry logic for failed API calls
+4. **Smart Caching**: Minimizes API calls by only fetching changed playlists
+
+**Spotify's Rate Limits:**
+- Approximate limit: 180 requests per minute
+- Measurement window: Rolling 30-second timeframe
+- Recommended: Max 20 requests per second
+- Error code: 429 (Too Many Requests)
+
 ### 🎵 Intelligent File Organization
 Files are organized using Spotify metadata with a 4-level hierarchy:
 - Playlist name (sanitized)
@@ -288,6 +318,7 @@ When you rate a track 1-star in Plex, Plexify will:
 - **Plex libraries must now be named to match Spotify playlists** for future 1-star deletion
 - Removed bidirectional sync for Discover Weekly/Release Radar
 - Added required `PLEX_URL` and `PLEX_TOKEN` variables
+- Added `DOWNLOAD_DELAY` for rate limit control
 
 **What stays the same:**
 - Download functionality
@@ -297,27 +328,57 @@ When you rate a track 1-star in Plex, Plexify will:
 **Migration steps:**
 1. Update environment variable names in your config
 2. Set `PLEX_URL` and `PLEX_TOKEN`
-3. Point `MUSIC_PATH` to your Plex music library root
-4. **Create new Plex libraries with names matching Spotify playlists** (see Plex Library Setup section)
-5. Create Plex Smart Playlists to replace old automatic playlists
-6. Remove any old Docker volumes or cache files (`spotify_playlists.json` will be recreated)
-7. First run will re-download metadata but skip existing files
-8. **File reorganization:** Existing files in `<Artist>/<Album>/` will not be moved. New structure is `<Playlist>/<Artist>/<Album>/`. Consider reorganizing manually or starting fresh.
+3. **Ensure you're using your own Spotify credentials** (not shared/public keys)
+4. Point `MUSIC_PATH` to your Plex music library root
+5. **Create new Plex libraries with names matching Spotify playlists** (see Plex Library Setup section)
+6. Create Plex Smart Playlists to replace old automatic playlists
+7. Remove any old Docker volumes or cache files (`spotify_playlists.json` will be recreated)
+8. First run will re-download metadata but skip existing files
+9. **File reorganization:** Existing files in `<Artist>/<Album>/` will not be moved. New structure is `<Playlist>/<Artist>/<Album>/`. Consider reorganizing manually or starting fresh.
 
 ---
 
 ## Troubleshooting
 
-### 🚫 Rate Limiting from Spotify
+### 🚫 Rate Limiting from Spotify/spotdl
 **Problem:** Logs show `Your application has reached a rate/request limit. Retry will occur after: 86400`
 
-**Solutions:**
-1. **Create your own Spotify credentials** instead of using shared public keys
-2. Increase `SECONDS_TO_WAIT` to reduce sync frequency (e.g., `7200` for 2 hours)
-3. Reduce number of playlists in `SPOTIFY_URIS`
-4. Smart caching is enabled by default and should prevent this on subsequent runs
+**Root Cause:** spotdl makes Spotify API calls for each track download. When combined with your app's API calls, rate limits are hit quickly.
 
-**Why it happens:** Public/shared Spotify API keys hit rate limits quickly. Your own credentials get a fresh quota.
+**Solutions:**
+1. **✅ Verify your credentials are being used:**
+   ```bash
+   # Check spotdl is receiving credentials
+   ps aux | grep spotdl
+   # You should see --client-id and --client-secret in the command
+   ```
+
+2. **Create your own Spotify credentials** if using shared/public keys:
+   - Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+   - Create a new app to get fresh API quota
+   - Update `SPOTIPY_CLIENT_ID` and `SPOTIPY_CLIENT_SECRET`
+
+3. **Increase download delay:**
+   ```bash
+   export DOWNLOAD_DELAY="0.1"  # 10 req/sec instead of 20
+   ```
+
+4. **Reduce sync frequency:**
+   ```bash
+   export SECONDS_TO_WAIT="7200"  # 2 hours between syncs
+   ```
+
+5. **Reduce number of playlists:**
+   - Temporarily remove some URIs from `SPOTIFY_URIS`
+   - Process large playlists separately
+
+6. **Smart caching (enabled by default)** should prevent this on subsequent runs
+
+**Why it happens:** 
+- Spotify limits ~180 requests/minute per application
+- Each track download = 1+ API calls from spotdl
+- Large playlists (900+ tracks) can exceed limits quickly
+- Public/shared credentials are already rate-limited by other users
 
 ### 📁 Files Not Appearing in Plex
 **Problem:** Downloaded files don't show up in Plex
@@ -359,7 +420,7 @@ When you rate a track 1-star in Plex, Plexify will:
 **Solutions:**
 1. Check your internet connection speed
 2. Verify `spotdl` is installed: `spotdl --version`
-3. Test manual download: `spotdl 'https://open.spotify.com/track/TRACK_ID'`
+3. Test manual download: `spotdl 'Artist - Track Name'`
 4. Check spotdl output in logs for specific errors (YouTube blocks, regional restrictions, etc.)
 
 ### 🔇 No Download Progress Visible
