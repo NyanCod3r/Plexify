@@ -52,10 +52,10 @@ def load_cached_playlists() -> List[Dict]:
         try:
             with open(CACHE_FILE, 'r') as f:
                 cached = json.load(f)
-                logging.info(f"Loaded {len(cached)} playlists from cache.")
+                logging.info(f"💾 Loaded {len(cached)} playlists from cache.")
                 return cached
         except Exception as e:
-            logging.warning(f"Failed to load cache: {e}")
+            logging.warning(f"⚠️  Failed to load cache: {e}")
     return None
 
 def has_playlist_changed(sp: spotipy.Spotify, cached_playlist: Dict) -> bool:
@@ -63,10 +63,10 @@ def has_playlist_changed(sp: spotipy.Spotify, cached_playlist: Dict) -> bool:
         current = sp.playlist(cached_playlist['id'], fields='snapshot_id')
         changed = current['snapshot_id'] != cached_playlist.get('snapshot_id')
         if changed:
-            logging.info(f"Playlist '{cached_playlist['name']}' has changed")
+            logging.info(f"🔄 Playlist '{cached_playlist['name']}' has changed")
         return changed
     except Exception as e:
-        logging.warning(f"Could not check playlist changes: {e}")
+        logging.warning(f"⚠️  Could not check playlist changes: {e}")
         return True
 
 # Main function to run the synchronization process
@@ -77,12 +77,12 @@ def runSync(sp: spotipy.Spotify, spotify_uris: List[Dict], force_refresh: bool =
     """
     Main sync function. Uses cached data when possible to minimize API calls.
     """
-    logging.info("Starting synchronization process...")
+    logging.info("🔄 Starting synchronization process...")
     
     cached_playlists = None if force_refresh else load_cached_playlists()
     
     if cached_playlists:
-        logging.info("Using cached playlist data. Checking for changes...")
+        logging.info("📋 Using cached playlist data. Checking for changes...")
         spotifyPlaylists = []
         needs_update = []
         
@@ -93,7 +93,7 @@ def runSync(sp: spotipy.Spotify, spotify_uris: List[Dict], force_refresh: bool =
                 spotifyPlaylists.append(cached)
         
         if needs_update:
-            logging.info(f"{len(needs_update)} playlists need updating.")
+            logging.info(f"🔄 {len(needs_update)} playlists need updating.")
             fresh_playlists = dumpSpotifyPlaylists(sp, spotify_uris, only_ids=needs_update)
             
             for fresh in fresh_playlists:
@@ -103,13 +103,13 @@ def runSync(sp: spotipy.Spotify, spotify_uris: List[Dict], force_refresh: bool =
             with open(CACHE_FILE, 'w') as f:
                 json.dump(spotifyPlaylists, f, indent=4)
         else:
-            logging.info("All playlists are up-to-date. No API calls needed.")
+            logging.info("✅ All playlists are up-to-date. No API calls needed.")
     else:
-        logging.info("No cache found or forced refresh. Fetching all playlists...")
+        logging.info("🔍 No cache found or forced refresh. Fetching all playlists...")
         spotifyPlaylists = dumpSpotifyPlaylists(sp, spotify_uris)
     
     syncPlaylists(sp, spotifyPlaylists)
-    logging.info("Synchronization process finished.")
+    logging.info("✅ Synchronization process finished.")
     return spotifyPlaylists
 
 # Dumps all relevant Spotify playlists to a JSON file
@@ -120,7 +120,7 @@ def dumpSpotifyPlaylists(sp: spotipy.Spotify, spotify_uris: List[Dict], only_ids
     """
     Fetches Spotify playlists based on provided URIs.
     """
-    logging.info("Fetching Spotify playlists...")
+    logging.info("📥 Fetching Spotify playlists...")
     spotifyPlaylists = []
     
     for uri in spotify_uris:
@@ -133,14 +133,14 @@ def dumpSpotifyPlaylists(sp: spotipy.Spotify, spotify_uris: List[Dict], only_ids
             if not only_ids or uri['playlist'] in only_ids:
                 spotifyPlaylists.append(getSpotifyPlaylist(sp, '', uri['playlist']))
         else:
-            logging.warning(f"Unknown URI type: {uri}")
+            logging.warning(f"⚠️  Unknown URI type: {uri}")
     
     if spotifyPlaylists:
         with open(CACHE_FILE, 'w') as f:
             json.dump(spotifyPlaylists, f, indent=4)
-        logging.info(f"Found {len(spotifyPlaylists)} Spotify playlists.")
+        logging.info(f"✅ Found {len(spotifyPlaylists)} Spotify playlists.")
     else:
-        logging.warning("No Spotify playlists found.")
+        logging.warning("⚠️  No Spotify playlists found.")
     
     return spotifyPlaylists
 
@@ -149,10 +149,10 @@ def syncPlaylists(sp: spotipy.Spotify, spotifyPlaylists: List[Dict]):
     Ensures local files exist for all Spotify playlists.
     """
     if not spotifyPlaylists:
-        logging.info("No playlists to sync.")
+        logging.info("✨ No playlists to sync.")
         return
     
     for playlist in spotifyPlaylists:
         playlist_name = playlist.get('name', 'Unknown')
-        logging.info(f"Processing playlist: {playlist_name}")
+        logging.info(f"📂 Processing playlist: {playlist_name}")
         ensureLocalFiles(sp, playlist)

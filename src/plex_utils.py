@@ -25,11 +25,11 @@ def ensureLocalFiles(sp, playlist: dict):
     """
     musicPath = os.environ.get('MUSIC_PATH')
     if not musicPath:
-        logging.error("MUSIC_PATH environment variable not set.")
+        logging.error("❌ MUSIC_PATH environment variable not set.")
         return
     
     playlistName = playlist.get('name', 'Unknown Playlist')
-    logging.info(f"Ensuring local files for playlist: {playlistName}")
+    logging.info(f"📁 Ensuring local files for playlist: {playlistName}")
     
     tracks = getSpotifyTracks(sp, playlist)
     
@@ -60,7 +60,7 @@ def ensureLocalFiles(sp, playlist: dict):
         
         # Check if track exists in any supported format
         if track_exists_in_any_format(albumFolder, fileName):
-            logging.debug(f"Track already exists: {fileName} (in some audio format)")
+            logging.debug(f"✅ Track already exists: {fileName} (in some audio format)")
             continue
         
         # Use search query instead of Spotify URL to reduce API calls
@@ -68,8 +68,8 @@ def ensureLocalFiles(sp, playlist: dict):
         download_queue.append((search_query, albumFolder, trackName, artistName))
     
     if download_queue:
-        logging.info(f"Downloading {len(download_queue)} missing tracks...")
-        logging.info(f"Rate limiting enabled: {DOWNLOAD_DELAY}s delay between downloads")
+        logging.info(f"⬇️  Downloading {len(download_queue)} missing tracks...")
+        logging.info(f"⏱️  Rate limiting enabled: {DOWNLOAD_DELAY}s delay between downloads")
         
         for idx, (search_query, output_folder, track_name, artist_name) in enumerate(download_queue, 1):
             downloadSpotifyTrack(search_query, output_folder, track_name, artist_name)
@@ -78,9 +78,9 @@ def ensureLocalFiles(sp, playlist: dict):
             if idx < len(download_queue):
                 time.sleep(DOWNLOAD_DELAY)
                 
-        logging.info(f"Completed downloading {len(download_queue)} tracks")
+        logging.info(f"✅ Completed downloading {len(download_queue)} tracks")
     else:
-        logging.info(f"All tracks already present for playlist: {playlistName}")
+        logging.info(f"✨ All tracks already present for playlist: {playlistName}")
 
 def track_exists_in_any_format(folder: str, file_name_without_ext: str) -> bool:
     """
@@ -91,7 +91,7 @@ def track_exists_in_any_format(folder: str, file_name_without_ext: str) -> bool:
     for ext in SUPPORTED_FORMATS:
         file_path = os.path.join(folder, f"{file_name_without_ext}{ext}")
         if os.path.exists(file_path):
-            logging.debug(f"Found existing file: {file_name_without_ext}{ext}")
+            logging.debug(f"🎵 Found existing file: {file_name_without_ext}{ext}")
             return True
     return False
 
@@ -112,33 +112,36 @@ def downloadSpotifyTrack(search_query: str, output_folder: str, track_name: str,
             search_query,
             '--output', output_folder,
             '--format', 'mp3',
-            '--log-level', spotdl_log_level
+            '--log-level', spotdl_log_level,
+            '--generate-lrc', 'False',  # Disable lyrics to prevent hangs
         ]
         
         # Pass Spotify credentials to spotdl
         if client_id and client_secret:
             cmd.extend(['--client-id', client_id])
             cmd.extend(['--client-secret', client_secret])
-            logging.debug(f"Passing credentials to spotdl: client_id={client_id[:8]}...")
+            logging.debug(f"🔑 Passing credentials to spotdl: client_id={client_id[:8]}...")
         else:
-            logging.warning("SPOTIPY_CLIENT_ID or SPOTIPY_CLIENT_SECRET not set - spotdl will use default credentials")
+            logging.warning("⚠️  SPOTIPY_CLIENT_ID or SPOTIPY_CLIENT_SECRET not set - spotdl will use default credentials")
         
         # Log the full command for debugging
-        logging.debug(f"spotdl command: {' '.join(cmd)}")
+        logging.debug(f"💻 spotdl command: {' '.join(cmd)}")
         
-        logging.info(f"Downloading: {artist_name} - {track_name}")
+        logging.info(f"⬇️  Downloading: {artist_name} - {track_name}")
         
-        result = subprocess.run(cmd, timeout=300)
+        result = subprocess.run(cmd, timeout=300, capture_output=True, text=True)
         
         if result.returncode != 0:
-            logging.error(f"Failed to download: {track_name}")
+            logging.error(f"❌ Failed to download: {track_name}")
+            if result.stderr:
+                logging.debug(f"📄 spotdl error: {result.stderr}")
         else:
-            logging.info(f"Downloaded: {track_name}")
+            logging.info(f"✅ Downloaded: {track_name}")
             
     except subprocess.TimeoutExpired:
-        logging.error(f"Timeout downloading: {track_name}")
+        logging.error(f"⏰ Timeout downloading: {track_name}")
     except Exception as e:
-        logging.error(f"Error downloading {track_name}: {e}")
+        logging.error(f"💥 Error downloading {track_name}: {e}")
 
 def sanitizeFilename(name: str) -> str:
     """
@@ -154,7 +157,7 @@ def get_one_star_tracks(plex: PlexServer, playlist_name: str) -> List[Dict]:
     Retrieves all tracks from Plex that have a 1-star rating.
     Searches in the Plex library section matching the playlist name.
     """
-    logging.info(f"Fetching 1-star rated tracks from Plex library: {playlist_name}...")
+    logging.info(f"🔍 Fetching 1-star rated tracks from Plex library: {playlist_name}...")
     one_star_tracks = []
     
     try:
@@ -169,9 +172,9 @@ def get_one_star_tracks(plex: PlexServer, playlist_name: str) -> List[Dict]:
                     'artist': track.artist().title if track.artist() else 'Unknown'
                 })
                 
-        logging.info(f"Found {len(one_star_tracks)} tracks with 1-star rating in {playlist_name}.")
+        logging.info(f"📊 Found {len(one_star_tracks)} tracks with 1-star rating in {playlist_name}.")
     except Exception as e:
-        logging.error(f"Error fetching 1-star tracks from library '{playlist_name}': {e}")
+        logging.error(f"❌ Error fetching 1-star tracks from library '{playlist_name}': {e}")
     
     return one_star_tracks
 
@@ -184,13 +187,13 @@ def delete_plex_track(track):
         track_title = track.title
         
         track.delete()
-        logging.info(f"Deleted from Plex library: {track_title}")
+        logging.info(f"🗑️  Deleted from Plex library: {track_title}")
         
         if file_path and os.path.exists(file_path):
             os.remove(file_path)
-            logging.info(f"Deleted file: {file_path}")
+            logging.info(f"📁 Deleted file: {file_path}")
         else:
-            logging.warning(f"File not found for deletion: {file_path}")
+            logging.warning(f"⚠️  File not found for deletion: {file_path}")
             
     except Exception as e:
-        logging.error(f"Error deleting track {track.title}: {e}")
+        logging.error(f"❌ Error deleting track {track.title}: {e}")
