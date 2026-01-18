@@ -4,6 +4,30 @@
 
 Plexify automatically syncs Spotify playlists to your local filesystem, downloading tracks using `spotdl`. Files are organized by playlist, then artist and album for seamless Plex library integration. Use **Plex Smart Playlists** (filtered by folder path) to surface these files in Plex.
 
+---
+
+## ✨ Features
+
+### ✅ Currently Implemented
+
+- **🎵 Spotify Playlist Sync** - Automatically downloads all tracks from specified Spotify playlists
+- **📦 Smart File Organization** - Files organized as `MUSIC_PATH/<Playlist>/<Artist>/<Album>/<Track>.mp3`
+- **💾 Intelligent Caching** - Uses `snapshot_id` to detect playlist changes and minimize API calls
+- **🔄 Continuous Sync** - Runs in a loop with configurable wait time between syncs
+- **🎧 High-Quality Downloads** - Downloads tracks at 320kbps using spotdl
+- **🏷️ Metadata Tagging** - Automatically tags downloaded files with artist, track, and album information
+- **📊 Detailed Logging** - Configurable log levels for both application and spotdl
+- **⚡ Rate Limit Protection** - Built-in retry logic with exponential backoff for API calls
+- **🐳 Docker Support** - Ready-to-use Docker container for easy deployment
+
+### 🚧 Coming Soon
+
+- **⭐ 1-Star Rating Cleanup** - Automatically remove tracks rated 1-star in Plex from Spotify playlists and local storage
+- **🔍 Smart File Discovery** - Search existing music library before downloading duplicates
+- **📋 Multi-Format Support** - Support for FLAC and other audio formats
+
+---
+
 ## ⚠️ What Changed in This Version
 
 **REMOVED:**
@@ -15,7 +39,7 @@ Plexify automatically syncs Spotify playlists to your local filesystem, download
 **NEW APPROACH:**
 - ✅ Downloads tracks to `MUSIC_PATH/<Playlist>/<Artist>/<Album>/`
 - ✅ Smart playlist caching with snapshot-based change detection
-- ✅ **Plex library sections must match Spotify playlist names** for 1-star deletion feature
+- ✅ **Plex library sections must match Spotify playlist names** for future 1-star deletion feature
 - ✅ You create Plex Smart Playlists manually (one-time setup)
 - ✅ Plex Smart Playlists auto-update based on folder contents
 
@@ -25,7 +49,7 @@ Plexify automatically syncs Spotify playlists to your local filesystem, download
 
 ## 🎯 Plex Library Setup (Important!)
 
-**For the 1-star deletion feature to work, your Plex library structure must match Spotify playlist names.**
+**For the upcoming 1-star deletion feature to work, your Plex library structure must match Spotify playlist names.**
 
 ### Recommended Setup:
 
@@ -38,7 +62,7 @@ Plexify automatically syncs Spotify playlists to your local filesystem, download
    - Library `Chill.Vibes` → Folder `/data/Music/Chill.Vibes`
 
 3. **Why this matters:**
-   - When you rate a track 1-star in Plex, the app knows which Spotify playlist to remove it from
+   - When you rate a track 1-star in Plex, the app will know which Spotify playlist to remove it from
    - The library name acts as the link between Plex and Spotify
    - Without matching names, 1-star deletion won't work
 
@@ -194,14 +218,14 @@ MUSIC_PATH/
 
 This structure allows you to:
 - Create Plex libraries that map directly to Spotify playlists
-- Enable 1-star deletion (library name = playlist name = folder name)
+- Enable future 1-star deletion (library name = playlist name = folder name)
 - Create Plex Smart Playlists per Spotify playlist (`Folder contains /music/Stoner.Blues.Rock`)
 - Group all music together while keeping playlists organized
 - Easily identify which playlist a track belongs to
 
 ---
 
-## Features
+## 🔧 Feature Details
 
 ### 🚀 Smart Playlist Caching
 Plexify uses Spotify's `snapshot_id` to detect playlist changes. This dramatically reduces API calls:
@@ -225,19 +249,6 @@ Examples:
 - `Stoner.Blues.Rock` becomes `Stoner.Blues.Rock` (dots are valid)
 - `My Playlist: Best Of` becomes `My Playlist_ Best Of`
 
-### ⭐ 1-Star Deletion (Coming Soon)
-When you rate a track 1-star in Plex, Plexify will:
-1. Find which Plex library the track belongs to (e.g., `Stoner.Blues.Rock`)
-2. Remove it from the corresponding Spotify playlist
-3. Delete the track from your Plex library
-4. Delete the local file
-
-**Requirements:**
-- Plex library name must exactly match Spotify playlist name
-- Track must exist in the corresponding Spotify playlist
-
-This feature is implemented but not yet enabled in the sync loop.
-
 ### 🏷️ Metadata Tagging
 All downloaded files are automatically tagged with:
 - Artist name
@@ -250,13 +261,31 @@ The `<Playlist>/<Artist>/<Album>/<Track>` structure allows precise Plex Smart Pl
 
 ---
 
+## 🚧 Upcoming Feature: ⭐ 1-Star Rating Cleanup
+
+**Status:** Implemented but not yet enabled in sync loop
+
+When you rate a track 1-star in Plex, Plexify will:
+1. Find which Plex library the track belongs to (e.g., `Stoner.Blues.Rock`)
+2. Remove it from the corresponding Spotify playlist
+3. Delete the track from your Plex library
+4. Delete the local file
+
+**Requirements:**
+- Plex library name must exactly match Spotify playlist name
+- Track must exist in the corresponding Spotify playlist
+
+**Why disabled?** This feature needs additional testing and user configuration options before being enabled by default.
+
+---
+
 ## Migration from v1.x
 
 **Breaking Changes:**
 - Environment variables changed: `SPOTIFY_CLIENT_ID` → `SPOTIPY_CLIENT_ID`
 - Plex playlist management removed (use Plex Smart Playlists instead)
 - File organization changed to `<Playlist>/<Artist>/<Album>/<Track>` structure (added playlist folder level)
-- **Plex libraries must now be named to match Spotify playlists** for 1-star deletion
+- **Plex libraries must now be named to match Spotify playlists** for future 1-star deletion
 - Removed bidirectional sync for Discover Weekly/Release Radar
 - Added required `PLEX_URL` and `PLEX_TOKEN` variables
 
