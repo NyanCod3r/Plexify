@@ -15,10 +15,55 @@ Plexify automatically syncs Spotify playlists to your local filesystem, download
 **NEW APPROACH:**
 - ✅ Downloads tracks to `MUSIC_PATH/<Playlist>/<Artist>/<Album>/`
 - ✅ Smart playlist caching with snapshot-based change detection
+- ✅ **Plex library sections must match Spotify playlist names** for 1-star deletion feature
 - ✅ You create Plex Smart Playlists manually (one-time setup)
 - ✅ Plex Smart Playlists auto-update based on folder contents
 
 **Why this change?** Plex Smart Playlists are more reliable, faster, and eliminate API sync issues. Smart caching dramatically reduces Spotify API calls and prevents rate limiting.
+
+---
+
+## 🎯 Plex Library Setup (Important!)
+
+**For the 1-star deletion feature to work, your Plex library structure must match Spotify playlist names.**
+
+### Recommended Setup:
+
+1. **Create separate Plex libraries for each Spotify playlist you want to sync**
+   - Library name **must exactly match** Spotify playlist name
+   - Example: Spotify playlist `Stoner.Blues.Rock` → Plex library `Stoner.Blues.Rock`
+
+2. **Point each library to its corresponding folder**
+   - Library `Stoner.Blues.Rock` → Folder `/data/Music/Stoner.Blues.Rock`
+   - Library `Chill.Vibes` → Folder `/data/Music/Chill.Vibes`
+
+3. **Why this matters:**
+   - When you rate a track 1-star in Plex, the app knows which Spotify playlist to remove it from
+   - The library name acts as the link between Plex and Spotify
+   - Without matching names, 1-star deletion won't work
+
+### Example Configuration:
+
+**Spotify Playlists:**
+- `Stoner.Blues.Rock`
+- `Chill.Vibes`
+- `Workout Mix`
+
+**File Structure:**
+```
+/data/Music/
+├── Stoner.Blues.Rock/
+│   └── Black Sabbath/...
+├── Chill.Vibes/
+│   └── Tycho/...
+└── Workout Mix/
+    └── Run The Jewels/...
+```
+
+**Plex Libraries (Settings → Libraries → Add Library):**
+- Name: `Stoner.Blues.Rock` → Folder: `/data/Music/Stoner.Blues.Rock`
+- Name: `Chill.Vibes` → Folder: `/data/Music/Chill.Vibes`
+- Name: `Workout Mix` → Folder: `/data/Music/Workout Mix`
 
 ---
 
@@ -124,7 +169,7 @@ docker run -d \
 
 ```
 MUSIC_PATH/
-├── Stoner.Blues.Rock/           (Playlist 1)
+├── Stoner.Blues.Rock/           (Playlist 1 = Plex Library 1)
 │   ├── Black Sabbath/
 │   │   ├── Paranoid/
 │   │   │   ├── War Pigs.mp3
@@ -134,7 +179,7 @@ MUSIC_PATH/
 │   └── Kyuss/
 │       └── Blues for the Red Sun/
 │           └── Thumb.mp3
-└── Chill.Vibes/                 (Playlist 2)
+└── Chill.Vibes/                 (Playlist 2 = Plex Library 2)
     └── Tycho/
         └── Dive/
             └── A Walk.mp3
@@ -142,12 +187,14 @@ MUSIC_PATH/
 
 **Structure explained:**
 1. **Level 1:** `MUSIC_PATH` - Your root music folder
-2. **Level 2:** Spotify playlist name (sanitized for filesystem)
+2. **Level 2:** Spotify playlist name (sanitized for filesystem) - **This must match your Plex library name**
 3. **Level 3:** Artist name from track metadata
 4. **Level 4:** Album name from track metadata
 5. **Level 5:** Track file (`.mp3` or `.flac`)
 
 This structure allows you to:
+- Create Plex libraries that map directly to Spotify playlists
+- Enable 1-star deletion (library name = playlist name = folder name)
 - Create Plex Smart Playlists per Spotify playlist (`Folder contains /music/Stoner.Blues.Rock`)
 - Group all music together while keeping playlists organized
 - Easily identify which playlist a track belongs to
@@ -178,6 +225,19 @@ Examples:
 - `Stoner.Blues.Rock` becomes `Stoner.Blues.Rock` (dots are valid)
 - `My Playlist: Best Of` becomes `My Playlist_ Best Of`
 
+### ⭐ 1-Star Deletion (Coming Soon)
+When you rate a track 1-star in Plex, Plexify will:
+1. Find which Plex library the track belongs to (e.g., `Stoner.Blues.Rock`)
+2. Remove it from the corresponding Spotify playlist
+3. Delete the track from your Plex library
+4. Delete the local file
+
+**Requirements:**
+- Plex library name must exactly match Spotify playlist name
+- Track must exist in the corresponding Spotify playlist
+
+This feature is implemented but not yet enabled in the sync loop.
+
 ### 🏷️ Metadata Tagging
 All downloaded files are automatically tagged with:
 - Artist name
@@ -196,6 +256,7 @@ The `<Playlist>/<Artist>/<Album>/<Track>` structure allows precise Plex Smart Pl
 - Environment variables changed: `SPOTIFY_CLIENT_ID` → `SPOTIPY_CLIENT_ID`
 - Plex playlist management removed (use Plex Smart Playlists instead)
 - File organization changed to `<Playlist>/<Artist>/<Album>/<Track>` structure (added playlist folder level)
+- **Plex libraries must now be named to match Spotify playlists** for 1-star deletion
 - Removed bidirectional sync for Discover Weekly/Release Radar
 - Added required `PLEX_URL` and `PLEX_TOKEN` variables
 
@@ -208,10 +269,11 @@ The `<Playlist>/<Artist>/<Album>/<Track>` structure allows precise Plex Smart Pl
 1. Update environment variable names in your config
 2. Set `PLEX_URL` and `PLEX_TOKEN`
 3. Point `MUSIC_PATH` to your Plex music library root
-4. Create Plex Smart Playlists to replace old automatic playlists
-5. Remove any old Docker volumes or cache files (`spotify_playlists.json` will be recreated)
-6. First run will re-download metadata but skip existing files
-7. **File reorganization:** Existing files in `<Artist>/<Album>/` will not be moved. New structure is `<Playlist>/<Artist>/<Album>/`. Consider reorganizing manually or starting fresh.
+4. **Create new Plex libraries with names matching Spotify playlists** (see Plex Library Setup section)
+5. Create Plex Smart Playlists to replace old automatic playlists
+6. Remove any old Docker volumes or cache files (`spotify_playlists.json` will be recreated)
+7. First run will re-download metadata but skip existing files
+8. **File reorganization:** Existing files in `<Artist>/<Album>/` will not be moved. New structure is `<Playlist>/<Artist>/<Album>/`. Consider reorganizing manually or starting fresh.
 
 ---
 
@@ -238,6 +300,21 @@ The `<Playlist>/<Artist>/<Album>/<Track>` structure allows precise Plex Smart Pl
 4. Verify file permissions: Plex user needs read access to `MUSIC_PATH`
 5. Check if files exist: `ls -la $MUSIC_PATH/<Playlist>/<Artist>/<Album>/`
 6. Verify Smart Playlist filter matches folder path exactly
+7. **Check library names match playlist names** for proper organization
+
+### ⚠️ Invalid Library Section Error
+**Problem:** `Error fetching 1-star tracks from library 'Stoner.Blues.Rock': Invalid library section`
+
+**Cause:** Your Plex library name doesn't match the Spotify playlist name.
+
+**Solution:**
+1. Check your Plex library names: Settings → Libraries
+2. Rename library to match Spotify playlist exactly (including dots, spaces, capitalization)
+3. Or create a new library with the correct name pointing to the playlist folder
+
+**Example:**
+- ❌ Plex library: `Music` → Playlist folder: `/data/Music/Stoner.Blues.Rock` (Won't work)
+- ✅ Plex library: `Stoner.Blues.Rock` → Playlist folder: `/data/Music/Stoner.Blues.Rock` (Works)
 
 ### 💾 Cache Issues
 **Problem:** Plexify keeps re-fetching playlists or shows wrong track counts
