@@ -92,7 +92,6 @@ def downloadSpotifyTrack(search_query: str, output_folder: str, track_name: str,
             search_query,
             '--output', output_folder,
             '--format', 'mp3',
-            '--bitrate', '320k',
             '--log-level', spotdl_log_level
         ]
         
@@ -100,6 +99,12 @@ def downloadSpotifyTrack(search_query: str, output_folder: str, track_name: str,
         if client_id and client_secret:
             cmd.extend(['--client-id', client_id])
             cmd.extend(['--client-secret', client_secret])
+            logging.debug(f"Passing credentials to spotdl: client_id={client_id[:8]}...")
+        else:
+            logging.warning("SPOTIPY_CLIENT_ID or SPOTIPY_CLIENT_SECRET not set - spotdl will use default credentials")
+        
+        # Log the full command for debugging
+        logging.debug(f"spotdl command: {' '.join(cmd)}")
         
         logging.info(f"Downloading: {artist_name} - {track_name}")
         
