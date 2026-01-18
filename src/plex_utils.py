@@ -21,7 +21,7 @@ def ensureLocalFiles(sp, playlist: dict):
     """
     Ensures that all tracks in a Spotify playlist are downloaded locally.
     
-    File structure: MUSIC_PATH/<Playlist>/<Artist>/<Album>/<Track>.mp3
+    File structure: MUSIC_PATH/<Playlist>/<Artist>/<Album>/<Artist - Track>.mp3
     """
     musicPath = os.environ.get('MUSIC_PATH')
     if not musicPath:
@@ -55,9 +55,12 @@ def ensureLocalFiles(sp, playlist: dict):
         albumFolder = os.path.join(artistFolder, safeAlbum)
         createFolder(albumFolder)
         
+        # File naming: Artist - TrackName.extension
+        fileName = f"{safeArtist} - {safeTrack}"
+        
         # Check if track exists in any supported format
-        if track_exists_in_any_format(albumFolder, safeTrack):
-            logging.debug(f"Track already exists: {safeTrack} (in some audio format)")
+        if track_exists_in_any_format(albumFolder, fileName):
+            logging.debug(f"Track already exists: {fileName} (in some audio format)")
             continue
         
         # Use search query instead of Spotify URL to reduce API calls
@@ -79,15 +82,16 @@ def ensureLocalFiles(sp, playlist: dict):
     else:
         logging.info(f"All tracks already present for playlist: {playlistName}")
 
-def track_exists_in_any_format(folder: str, track_name: str) -> bool:
+def track_exists_in_any_format(folder: str, file_name_without_ext: str) -> bool:
     """
     Check if a track file exists in any supported audio format.
+    file_name_without_ext should be "Artist - TrackName" without extension.
     Returns True if found, False otherwise.
     """
     for ext in SUPPORTED_FORMATS:
-        file_path = os.path.join(folder, f"{track_name}{ext}")
+        file_path = os.path.join(folder, f"{file_name_without_ext}{ext}")
         if os.path.exists(file_path):
-            logging.debug(f"Found existing file: {track_name}{ext}")
+            logging.debug(f"Found existing file: {file_name_without_ext}{ext}")
             return True
     return False
 
@@ -95,6 +99,8 @@ def downloadSpotifyTrack(search_query: str, output_folder: str, track_name: str,
     """
     Downloads a single track using spotdl with search query instead of URL.
     This reduces Spotify API calls from spotdl.
+    
+    spotdl will name the file as "Artist - TrackName.mp3" by default.
     """
     spotdl_log_level = os.environ.get('SPOTDL_LOG_LEVEL', os.environ.get('LOG_LEVEL', 'INFO'))
     client_id = os.environ.get('SPOTIPY_CLIENT_ID')
