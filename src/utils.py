@@ -16,12 +16,13 @@ import os
 import json
 import logging
 import spotipy
+from typing import List, Dict
 from spotify_utils import getSpotifyUserPlaylists, getSpotifyPlaylist
 from plex_utils import ensureLocalFiles
 
 CACHE_FILE = 'spotify_playlists.json'
 
-def load_cached_playlists():
+def load_cached_playlists() -> List[Dict]:
     if os.path.exists(CACHE_FILE):
         try:
             with open(CACHE_FILE, 'r') as f:
@@ -32,7 +33,7 @@ def load_cached_playlists():
             logging.warning(f"Failed to load cache: {e}")
     return None
 
-def has_playlist_changed(sp: spotipy.client, cached_playlist: dict) -> bool:
+def has_playlist_changed(sp: spotipy.Spotify, cached_playlist: Dict) -> bool:
     try:
         current = sp.playlist(cached_playlist['id'], fields='snapshot_id')
         changed = current['snapshot_id'] != cached_playlist.get('snapshot_id')
@@ -47,7 +48,7 @@ def has_playlist_changed(sp: spotipy.client, cached_playlist: dict) -> bool:
 # - plex: The Plex server instance
 # - sp: The Spotify client instance
 # - spotify_uris: A list of parsed Spotify URIs
-def runSync(sp: spotipy.client, spotify_uris: list, force_refresh: bool = False):
+def runSync(sp: spotipy.Spotify, spotify_uris: List[Dict], force_refresh: bool = False):
     """
     Main sync function. Uses cached data when possible to minimize API calls.
     """
@@ -90,7 +91,7 @@ def runSync(sp: spotipy.client, spotify_uris: list, force_refresh: bool = False)
 # - sp: The Spotify client instance
 # - spotify_uris: A list of parsed Spotify URIs
 # Returns: A list of Spotify playlists
-def dumpSpotifyPlaylists(sp: spotipy.client, spotify_uris: list, only_ids: list = None) -> list:
+def dumpSpotifyPlaylists(sp: spotipy.Spotify, spotify_uris: List[Dict], only_ids: List[str] = None) -> List[Dict]:
     """
     Fetches Spotify playlists based on provided URIs.
     """
@@ -118,7 +119,7 @@ def dumpSpotifyPlaylists(sp: spotipy.client, spotify_uris: list, only_ids: list 
     
     return spotifyPlaylists
 
-def syncPlaylists(sp: spotipy.client, spotifyPlaylists: list):
+def syncPlaylists(sp: spotipy.Spotify, spotifyPlaylists: List[Dict]):
     """
     Ensures local files exist for all Spotify playlists.
     """
