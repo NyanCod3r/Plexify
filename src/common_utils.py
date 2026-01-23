@@ -15,17 +15,12 @@ import spotipy
 
 # Creates a folder for a playlist if it doesn't already exist
 # - playlistName: The name of the playlist (used as the folder name)
-def createFolder(playlistName):
-    music_path = os.environ.get('MUSIC_PATH')
-    if not music_path:
-        logging.error('MUSIC_PATH not set, cannot create folder for %s' % playlistName)
-        return
-    folder = os.path.join(music_path, playlistName)
+def createFolder(folder_path):
     try:
-        os.makedirs(folder, exist_ok=True)
-        logging.debug('Ensured folder exists: %s' % folder)
+        os.makedirs(folder_path, exist_ok=True)
+        logging.debug(f'Ensured folder exists: {folder_path}')
     except Exception as e:
-        logging.error('Failed to create folder %s: %s' % (folder, str(e)))
+        logging.error(f'Failed to create folder {folder_path}: {e}')
 
 # Retries a function with exponential backoff in case of failures
 # - func: The function to retry

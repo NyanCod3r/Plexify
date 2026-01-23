@@ -1,98 +1,35 @@
 # Plexify
 
-Plexify automatically syncs public Spotify playlists to your Plex server. It can sync all public playlists from a specific user or sync individual public playlists. If a track from a Spotify playlist is not found in your Plex library, Plexify will download it using `spotdl`.
+**⚠️ This is a breaking change that drops automatic Plex playlist management in favor of Plex Smart Playlists**
 
-## How it works
+Plexify automatically syncs Spotify playlists to your local filesystem, downloading tracks using **YouTube search + yt-dlp**. Files are organized by playlist, then artist and album for seamless Plex library integration. Use **Plex Smart Playlists** (filtered by folder path) to surface these files in Plex.
 
-<video src="files/run_example.gif" controls width="600"></video>
+---
 
-The application synchronizes playlists by adding new tracks from Spotify to your Plex playlists.
+## ✨ Features
 
-1.  **Reads Configuration**: The application loads configuration from environment variables, including connection details for Plex and Spotify, and the list of Spotify URIs to sync.
-2.  **Fetches Playlists**: It retrieves all tracks from the specified Spotify user profiles and individual playlists. It also fetches the tracks from the corresponding playlists on your Plex server.
-3.  **Calculates Differences**: For each playlist, it identifies tracks that are present in the Spotify playlist but are missing from the corresponding Plex playlist.
-4.  **Executes Sync Actions**:
-    *   For each track that needs to be **added**, the application first checks if it exists in your Plex library. If not, it is downloaded using `spotdl`. The track is then added to the Plex playlist.
-    *   **Default behavior**: Tracks removed from the Spotify playlist are **not** removed from the Plex playlist (one-way sync from Spotify -> Plex).
-    *   **Special playlists (1:1 bidirectional)**: Playlists named exactly "Discover Weekly" or "Release Radar" (case-insensitive) are synced 1:1. For these playlists Plexify will:
-        - Remove items from the Plex playlist that are not present in the corresponding Spotify playlist.
-        - When removing such items, Plexify will attempt to delete the underlying local media files only if the file path is under the configured MUSIC_PATH. Files outside MUSIC_PATH will not be deleted.
-        - Plexify does not modify Spotify playlists; you must manage Spotify-side edits yourself.
-5.  **Loops**: The entire process runs in a continuous loop, with a configurable wait time between syncs.
+### ✅ Currently Implemented
 
-## Sync behavior (summary)
+- **🎵 Spotify Playlist Sync** - Automatically downloads all tracks from specified Spotify playlists
+- **📦 Smart File Organization** - Files organized as `MUSIC_PATH/<Playlist>/<Artist>/<Album>/<Track>.flac`
+- **💾 Intelligent Caching** - Uses `snapshot_id` to detect playlist changes and minimize API calls
+- **🔄 Continuous Sync** - Runs in a loop with configurable wait time between syncs
+- **🎧 High-Quality Downloads** - Downloads tracks using YouTube search + yt-dlp (FLAC preferred, MP3 fallback)
+- **🎼 Smart Format Detection** - Automatically checks for existing FLAC files first, then MP3
+- **🏷️ Metadata Tagging** - Automatically tags downloaded files with artist, track, and album information
+- **📊 Detailed Logging** - Configurable log levels for both application and yt-dlp
+- **⚡ Rate Limit Protection** - Built-in retry logic with exponential backoff for API calls and download delays
+- **🔑 Credential Passthrough** - Automatically passes your Spotify credentials to prevent rate limiting
+- **🐳 Docker Support** - Ready-to-use Docker container for easy deployment
+- **⭐ 1-Star Rating Cleanup** - Automatically remove tracks rated 1-star in Plex from Spotify playlists and local storage
 
-- One-way (Spotify -> Plex) for all playlists by default:
-  - Missing tracks in Plex are downloaded/added.
-  - Plex items removed on Spotify are left untouched in Plex.
-- Bidirectional (1:1) for playlists named "Discover Weekly" or "Release Radar":
-  - Plex playlist will be made identical to Spotify playlist.
-  - Plex items not present in Spotify will be removed from the Plex playlist and their local files deleted if they live under MUSIC_PATH.
-  - Plexify will never change Spotify playlists.
+### 🚧 Coming Soon
 
-## Safety and verification
+- **🔄 Resume Failed Downloads** - Retry tracks that failed to download
+- **📈 Download Statistics** - Track counts, storage usage per playlist
+- **🎛️ Configurable File Naming** - Custom filename patterns
 
-- Deletions only occur for playlists explicitly recognized as bidirectional ("Discover Weekly", "Release Radar").
-- Deletion of local files is guarded: files are only deleted when their absolute path starts with the configured MUSIC_PATH.
-- Verification steps before enabling deletion:
-  1. Ensure MUSIC_PATH is set correctly and points to the folder containing Plex downloads:
-     ```bash
-     echo "$MUSIC_PATH"
-     ls -la "$MUSIC_PATH"
-     ```
-  2. Run a single sync in debug mode and inspect logs for removal actions:
-     ```bash
-     PYTHONPATH=src LOG_LEVEL=DEBUG python src/main.py
-     ```
-  3. Confirm the list of items to be removed in logs before allowing automatic runs.
-
-## Configuration
-
-The application is configured using environment variables.
-
-| Variable | Description | Required | Default |
-| :--- | :--- | :--- | :--- |
-| `PLEX_URL` | The full URL for your Plex server. | Yes | |
-| `PLEX_TOKEN` | Your Plex authentication token. | Yes | |
-| `SPOTIFY_CLIENT_ID` | Your Spotify application client ID. | Yes | |
-| `SPOTIFY_CLIENT_SECRET` | Your Spotify application client secret. | Yes | |
-| `SPOTIFY_URIS` | A comma-separated list of Spotify URIs. Can be user or playlist URIs. | Yes | |
-| `MUSIC_PATH` | The absolute path on the host where music files will be downloaded and where deletions are allowed. | Yes | `/music` |
-| `SECONDS_TO_WAIT` | The number of seconds to wait between sync cycles. | No | `3600` |
-| `LOG_LEVEL` | The logging level for the application. | No | `INFO` |
-
-**Example `SPOTIFY_URIS`:**
-`spotify:user:USERNAME,spotify:playlist:PLAYLIST_ID`
-
-## Usage
-
-To run the application, ensure all required environment variables are set and execute the main script:
-
-```bash
-python src/main.py
-```
-
-You can run this application using Docker:
-
-```bash
-docker run -d \
-  --name=plexify \
-  -e SPOTIFY_CLIENT_ID="your_spotify_client_id" \
-  -e SPOTIFY_CLIENT_SECRET="your_spotify_client_secret" \
-  -e PLEX_URL="http://your_plex_url:32400" \
-  -e PLEX_TOKEN="your_plex_token" \
-  -e SPOTIFY_URIS="spotify:user:your_spotify_username" \
-  -e MUSIC_PATH="/path/to/your/music" \
-  -e LOG_LEVEL="INFO" \
-  -v /path/to/your/music:/music \
-  nyancod3r/plexify:latest
-```
-
-# Plexify (Beta - Smart Playlist Edition)
-
-**🎉 This is a beta version that drops automatic Plex playlist management in favor of Plex Smart Playlists**
-
-Plexify automatically downloads tracks from Spotify playlists to your local filesystem, organized by playlist name. Use **Plex Smart Playlists** (filtered by folder path) to surface these files in Plex.
+---
 
 ## ⚠️ What Changed in This Version
 
@@ -101,15 +38,69 @@ Plexify automatically downloads tracks from Spotify playlists to your local file
 - ❌ Plex API playlist operations
 - ❌ Bidirectional sync logic
 - ❌ Track removal from Plex playlists
+- ❌ `spotdl` dependency (replaced with YouTube search + yt-dlp)
 
 **NEW APPROACH:**
-- ✅ Downloads tracks to `MUSIC_PATH/<playlist_name>/`
-- ✅ Searches existing music library before downloading (up to 2 folder levels deep)
-- ✅ Copies found files to playlist folder instead of re-downloading
+- ✅ **YouTube search + yt-dlp** replaces spotdl for reliable track downloads
+- ✅ **Automatic FLAC preference** - Downloads FLAC when available, MP3 as fallback
+- ✅ Downloads tracks to `MUSIC_PATH/<Playlist>/<Artist>/<Album>/`
+- ✅ Smart playlist caching with snapshot-based change detection
+- ✅ **Plex library sections must match Spotify playlist names** for 1-star deletion feature
+- ✅ **Spotify credentials automatically passed** to prevent rate limiting
+- ✅ **Configurable download delays** to respect API rate limits
+- ✅ **Smart format detection** - Checks for FLAC first, then MP3
 - ✅ You create Plex Smart Playlists manually (one-time setup)
 - ✅ Plex Smart Playlists auto-update based on folder contents
 
-**Why this change?** Plex Smart Playlists are more reliable, faster, and eliminate API sync issues. This approach also reduces redundant downloads by finding tracks you already have.
+**Why this change?** 
+- `spotdl` was downloading wrong tracks due to lyrics processing corruption
+- YouTube search + yt-dlp provides more reliable track matching
+- FLAC-first preference gives you the best quality available
+- Plex Smart Playlists are more reliable than API sync
+
+---
+
+## 🎯 Plex Library Setup (Important!)
+
+**For the 1-star deletion feature to work, your Plex library structure must match Spotify playlist names.**
+
+### Recommended Setup:
+
+1. **Create separate Plex libraries for each Spotify playlist you want to sync**
+   - Library name **must exactly match** Spotify playlist name
+   - Example: Spotify playlist `Stoner.Blues.Rock` → Plex library `Stoner.Blues.Rock`
+
+2. **Point each library to its corresponding folder**
+   - Library `Stoner.Blues.Rock` → Folder `/data/Music/Stoner.Blues.Rock`
+   - Library `Chill.Vibes` → Folder `/data/Music/Chill.Vibes`
+
+3. **How it works:**
+   - When you rate a track 1-star in Plex, the app knows which Spotify playlist to remove it from
+   - The library name acts as the link between Plex and Spotify
+   - Without matching names, 1-star deletion won't work
+
+### Example Configuration:
+
+**Spotify Playlists:**
+- `Stoner.Blues.Rock`
+- `Chill.Vibes`
+- `Workout Mix`
+
+**File Structure:**
+```
+/data/Music/
+├── Stoner.Blues.Rock/
+│   └── Black Sabbath/...
+├── Chill.Vibes/
+│   └── Tycho/...
+└── Workout Mix/
+    └── Run The Jewels/...
+```
+
+**Plex Libraries (Settings → Libraries → Add Library):**
+- Name: `Stoner.Blues.Rock` → Folder: `/data/Music/Stoner.Blues.Rock`
+- Name: `Chill.Vibes` → Folder: `/data/Music/Chill.Vibes`
+- Name: `Workout Mix` → Folder: `/data/Music/Workout Mix`
 
 ---
 
@@ -120,18 +111,18 @@ Plexify automatically downloads tracks from Spotify playlists to your local file
 1. In Plex Web UI, go to **Music** → **Playlists** → **+ New Playlist** → **Smart Playlist**
 2. Configure filters:
    - **Type**: `Music`
-   - **Folder** → **contains** → `<MUSIC_PATH>/<playlist_name>`
-   - Example: `/data/Music/Discover Weekly`
+   - **Folder** → **contains** → `<MUSIC_PATH>/<PlaylistName>`
+   - Additional filters as needed (genre, artist, etc.)
 3. Save the playlist
-4. Plex will automatically include all tracks from that folder
-5. Repeat for each Spotify playlist you want to sync
+4. Plex will automatically include all tracks from matching folders
+5. Repeat for each collection you want
 
 **Example Smart Playlist filters:**
-- Discover Weekly: `Folder contains /data/Music/Discover Weekly`
-- Release Radar: `Folder contains /data/Music/Release Radar`
-- My Playlist: `Folder contains /data/Music/My Playlist`
+- Specific Spotify Playlist: `Folder contains /data/Music/Stoner.Blues.Rock`
+- All Rock Artists: `Folder contains /data/Music/Rock` AND `Genre is Rock`
+- Specific Artist Across Playlists: `Folder contains /data/Music` AND `Artist is AC/DC`
 
-As Plexify downloads new tracks to these folders, your Smart Playlists auto-update. No API calls needed!
+As Plexify downloads new tracks, your Smart Playlists auto-update. No API calls needed!
 
 ---
 
@@ -143,42 +134,51 @@ As Plexify downloads new tracks to these folders, your Smart Playlists auto-upda
 | `SPOTIPY_CLIENT_SECRET` | Your Spotify application client secret. | Yes | |
 | `SPOTIFY_URIS` | Comma-separated Spotify URIs (user or playlist). | Yes | |
 | `MUSIC_PATH` | Absolute path where music files are stored/downloaded. | Yes | `/music` |
+| `PLEX_URL` | Full URL for your Plex server (e.g., http://localhost:32400). | Yes | |
+| `PLEX_TOKEN` | Your Plex authentication token. | Yes | |
+| `PREFER_FLAC` | Download FLAC when available, MP3 fallback (true/false). | No | `true` |
 | `SECONDS_TO_WAIT` | Seconds to wait between sync cycles. | No | `3600` |
 | `LOG_LEVEL` | Python logging level (DEBUG, INFO, WARNING, ERROR). | No | `INFO` |
-| `SPOTDL_LOG_LEVEL` | spotdl logging level (separate from LOG_LEVEL). | No | Same as `LOG_LEVEL` |
-| `SPOTDL_COOKIE_FILE` | Path to YouTube cookies file (highly recommended). | No | None |
-| `DOWNLOAD_DELAY` | Delay in seconds between downloads (avoid rate limits). | No | `2` |
+| `DOWNLOAD_DELAY` | Seconds to wait between track downloads (rate limiting). | No | `0.1` |
 
-### New Environment Variables Explained
+### Environment Variables Explained
 
-**`SPOTDL_LOG_LEVEL`**  
-Controls verbosity of spotdl output. Set to `DEBUG` to see detailed download progress, or `INFO` for cleaner logs. If not set, inherits from `LOG_LEVEL`.
+**`PREFER_FLAC`**  
+Controls download format preference:
+- `true` (default): Downloads FLAC when available, falls back to MP3 if FLAC fails
+- `false`: Downloads MP3 only (saves storage space)
 
-**`SPOTDL_COOKIE_FILE`**  
-Path to YouTube Music cookies file. **Highly recommended** to avoid rate limiting. Without cookies, you'll hit YouTube's API limits quickly (causing "Retry will occur after X seconds" warnings). With cookies, you get much higher limits.
+File detection always checks for both FLAC and MP3 regardless of this setting - won't re-download if either format exists.
 
-**How to get cookies:**
-```bash
-# Install yt-dlp
-pip install yt-dlp
-```
-# Export cookies from your browser
-# Firefox:
-yt-dlp --cookies-from-browser firefox --cookies cookies.txt "https://music.youtube.com"
+**`SPOTIPY_CLIENT_ID` & `SPOTIPY_CLIENT_SECRET`**  
+Your personal Spotify API credentials. These are automatically passed to prevent rate limiting. Without your own credentials, the app uses shared keys that quickly hit rate limits.
 
-# Chrome:
-yt-dlp --cookies-from-browser chrome --cookies cookies.txt "https://music.youtube.com"
-
-# Then set the path:
-export SPOTDL_COOKIE_FILE="/path/to/cookies.txt"
-
-**DOWNLOAD_DELAY**  
-Number of seconds to wait between each download. Default is 2 seconds to help avoid rate limits. Increase if you still hit limits even with cookies.
+**`DOWNLOAD_DELAY`**  
+Time to wait between each track download. Default is `0.1` seconds (10 requests/second), which respects Spotify's recommended rate limit. Increase this value if you still encounter rate limiting (e.g., `0.2` for 5 req/sec).
 
 **Example SPOTIFY_URIS:**
 ```
 spotify:user:USERNAME,spotify:playlist:PLAYLIST_ID,spotify:playlist:ANOTHER_ID
 ```
+
+### Getting Your Spotify Credentials
+
+**⚠️ Important: Use your own credentials to avoid rate limiting!**
+
+1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+2. Create a new app
+3. Copy your Client ID and Client Secret
+4. Set redirect URI to `http://localhost:8888/callback`
+
+Your credentials are automatically used - no manual configuration needed.
+
+### Getting Your Plex Token
+
+1. Open Plex Web UI
+2. Play any media item
+3. Click the three-dot menu → "Get Info" → "View XML"
+4. Look for `X-Plex-Token=` in the URL
+5. Copy the token value
 
 ---
 
@@ -187,17 +187,16 @@ spotify:user:USERNAME,spotify:playlist:PLAYLIST_ID,spotify:playlist:ANOTHER_ID
 ### Local
 
 ```bash
-# Set environment variables
 export SPOTIPY_CLIENT_ID="your_spotify_client_id"
 export SPOTIPY_CLIENT_SECRET="your_spotify_client_secret"
 export SPOTIFY_URIS="spotify:user:your_username"
 export MUSIC_PATH="/data/Music"
+export PLEX_URL="http://localhost:32400"
+export PLEX_TOKEN="your_plex_token"
+export PREFER_FLAC="true"  # Optional: FLAC preferred (default), set to "false" for MP3-only
 export LOG_LEVEL="INFO"
-export SPOTDL_COOKIE_FILE="/path/to/cookies.txt"  # Optional but recommended
-export DOWNLOAD_DELAY="2"  # Optional
-```
-# Run
-```
+export DOWNLOAD_DELAY="0.1"  # Optional: 10 req/sec (default)
+
 python src/main.py
 ```
 
@@ -210,12 +209,12 @@ docker run -d \
   -e SPOTIPY_CLIENT_SECRET="your_spotify_client_secret" \
   -e SPOTIFY_URIS="spotify:user:your_spotify_username" \
   -e MUSIC_PATH="/music" \
+  -e PLEX_URL="http://plex:32400" \
+  -e PLEX_TOKEN="your_plex_token" \
+  -e PREFER_FLAC="true" \
   -e LOG_LEVEL="INFO" \
-  -e SPOTDL_LOG_LEVEL="INFO" \
-  -e SPOTDL_COOKIE_FILE="/config/cookies.txt" \
-  -e DOWNLOAD_DELAY="2" \
+  -e DOWNLOAD_DELAY="0.1" \
   -v /path/to/your/music:/music \
-  -v /path/to/cookies.txt:/config/cookies.txt \
   nyancod3r/plexify:latest
 ```
 
@@ -225,126 +224,308 @@ docker run -d \
 
 ```
 MUSIC_PATH/
-├── Discover Weekly/
-│   ├── Artist1 - Song1.mp3
-│   └── Artist2 - Song2.mp3
-├── Release Radar/
-│   └── Artist3 - Song3.mp3
-├── My Awesome Playlist/
-│   ├── Artist4 - Song4.mp3
-│   └── Artist5 - Song5.mp3
-└── Existing Music/        # Your existing library
-    ├── Artist6/
-    │   └── Album1/
-    │       └── Track.mp3  # Will be found and copied instead of re-downloaded
-    └── Artist7/
-        └── Single.mp3
+├── Stoner.Blues.Rock/                    (Playlist 1 = Plex Library 1)
+│   ├── Black Sabbath/
+│   │   ├── Paranoid/
+│   │   │   ├── Black Sabbath - War Pigs.flac
+│   │   │   └── Black Sabbath - Paranoid.mp3
+│   │   └── Master of Reality/
+│   │       └── Black Sabbath - Sweet Leaf.flac
+│   └── Kyuss/
+│       └── Blues for the Red Sun/
+│           └── Kyuss - Thumb.flac
+└── Chill.Vibes/                          (Playlist 2 = Plex Library 2)
+    └── Tycho/
+        └── Dive/
+            └── Tycho - A Walk.flac
 ```
+
+**Structure explained:**
+1. **Level 1:** `MUSIC_PATH` - Your root music folder
+2. **Level 2:** Spotify playlist name (sanitized for filesystem) - **This must match your Plex library name**
+3. **Level 3:** Artist name from track metadata
+4. **Level 4:** Album name from track metadata
+5. **Level 5:** Track file: `Artist - Track.flac` (or `.mp3` if FLAC unavailable)
+
+**File naming convention:** `Artist - Track.extension`
+
+**Format priority:** FLAC preferred, MP3 fallback - automatic, no configuration needed.
+
+This structure allows you to:
+- Create Plex libraries that map directly to Spotify playlists
+- Enable 1-star deletion (library name = playlist name = folder name)
+- Create Plex Smart Playlists per Spotify playlist (`Folder contains /music/Stoner.Blues.Rock`)
+- Get the highest quality available (FLAC when possible)
+- Identify tracks easily: artist name is always in the filename
+- Avoid filename collisions when multiple artists have same track names
 
 ---
 
-## Features
+## 🔧 Feature Details
 
-### 🔍 Smart File Discovery
-Before downloading, Plexify searches your entire `MUSIC_PATH` up to 2 levels deep for existing files. This helps:
-- **Reduce redundant downloads** (finds tracks you already have)
-- **Avoid YouTube rate limits** (fewer API calls)
-- **Save bandwidth and time**
+### 🚀 Smart Playlist Caching
+Plexify uses Spotify's `snapshot_id` to detect playlist changes. This dramatically reduces API calls:
 
-### 🎵 Intelligent Matching
-Files are matched using normalized artist and track names, ignoring:
-- Special characters (`/`, `_`, `:`, `?`)
-- Spaces and capitalization
-- Different naming conventions
+**First run:** Fetches all playlists and tracks  
+**Subsequent runs:** Only checks snapshot IDs (1 API call per playlist)  
+**If unchanged:** No additional API calls needed  
+**If changed:** Only re-fetches that specific playlist
 
-Examples of matched files:
-- `AC/DC - T.N.T..mp3` matches `ACDC - TNT.mp3`
-- `Ke$ha - TiK ToK.mp3` matches `Kesha - Tik Tok.mp3`
+This prevents rate limiting and saves bandwidth.
 
-### 📋 File Copying
-If a track exists elsewhere in your library, Plexify copies it to the playlist folder instead of re-downloading. Original files remain untouched.
+### ⚡ Rate Limit Protection
+Multiple layers of protection against API rate limits:
+
+1. **Credential Management**: Your `SPOTIPY_CLIENT_ID` and `SPOTIPY_CLIENT_SECRET` are automatically used
+2. **Download Delays**: Configurable delay between downloads (default 0.1s = 10 req/sec)
+3. **Exponential Backoff**: Built-in retry logic for failed API calls
+4. **Smart Caching**: Minimizes API calls by only fetching changed playlists
+
+### 🎼 Smart Format Detection & Download
+
+**File Detection (when checking if track exists):**
+1. First checks for `Artist - Track.flac`
+2. Then checks for `Artist - Track.mp3`
+3. If either exists, skips download
+
+**Download Priority (when downloading new tracks):**
+1. Attempts to download FLAC from best available YouTube source
+2. If FLAC unavailable or fails, downloads MP3
+3. Uses yt-dlp format selector: `bestaudio[ext=flac]/bestaudio[acodec*=flac]/bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best`
+
+**Example scenarios:**
+- New track: Downloads FLAC if available from YouTube, MP3 otherwise
+- Existing FLAC: Skips download entirely
+- Existing MP3: Skips download entirely (won't upgrade to FLAC)
+- No existing file: Downloads best quality available
+
+### 🎯 YouTube Search + yt-dlp Download Process
+
+**Why we replaced spotdl:**
+- spotdl was downloading wrong tracks due to lyrics processing corruption
+- Example: Requesting "Dirty Streets - White Horse" would download "Bonez MC - bissu dumm"
+- YouTube search + yt-dlp provides direct control over track selection
+
+**Download process:**
+1. **Search Phase**: Use yt-dlp to search YouTube for "Artist - Track"
+2. **Selection Phase**: Get the top result video ID
+3. **Download Phase**: Use yt-dlp with format selectors to download audio
+4. **Fallback**: If YouTube fails, try spotdl as last resort (rarely used)
+
+**Format Selection:**
+- `bestaudio[ext=flac]` - Real FLAC if YouTube has it
+- `bestaudio[acodec*=flac]` - Any FLAC codec
+- `bestaudio[ext=m4a]` - High-quality AAC for conversion
+- `bestaudio[ext=webm]` - Usually Opus, good for conversion  
+- `bestaudio` - Any audio-only format
+- `best[height<=480]` - Low-res video as last resort (has audio)
+
+### 🎵 Intelligent File Organization
+Files are organized using Spotify metadata with a 4-level hierarchy:
+- Playlist name (sanitized)
+- Artist name from track metadata
+- Album name from track metadata
+- Track name with sanitized filenames (removes invalid characters: `< > : " / \ | ? *`)
+
+**File naming convention:** `Artist - Track.extension`
+
+Examples:
+- `AC/DC` becomes `AC_DC`
+- `Stoner.Blues.Rock` becomes `Stoner.Blues.Rock` (dots are valid)
+- `My Playlist: Best Of` becomes `My Playlist_ Best Of`
+- File: `Black Sabbath - War Pigs.flac`
 
 ### 🏷️ Metadata Tagging
 All downloaded files are automatically tagged with:
 - Artist name
 - Track title
+- Album name
 - Album artist
 
-### ⏱️ Rate Limit Management
-- Configurable delay between downloads
-- YouTube cookie support for higher API limits
-- Real-time download progress logging
+### 📦 Plex Library Compatibility
+The `<Playlist>/<Artist>/<Album>/<Track>` structure allows precise Plex Smart Playlist targeting. Point your Plex library at `MUSIC_PATH` and all playlists will be available for filtering.
+
+### ⭐ 1-Star Rating Cleanup
+
+**Status:** Fully implemented and enabled
+
+When you rate a track 1-star in Plex, Plexify will:
+1. Detect the 1-star rating during the next sync cycle
+2. Find which Plex library the track belongs to (e.g., `Stoner.Blues.Rock`)
+3. Match the track in the corresponding Spotify playlist by title and artist
+4. Remove it from the Spotify playlist via API
+5. Delete the track from your Plex library
+6. Delete the local file from the filesystem
+
+**Requirements:**
+- Plex library name must exactly match Spotify playlist name
+- Track must exist in the corresponding Spotify playlist
+- Track matching is done by normalized title and artist name (case-insensitive)
+
+**Usage:**
+1. Play a track in Plex you want to remove
+2. Rate it 1-star (2 thumbs down)
+3. Wait for next sync cycle (or restart Plexify)
+4. Track will be automatically removed from everywhere
+
+---
+
+## Migration from v1.x
+
+**Breaking Changes:**
+- Environment variables changed: `SPOTIFY_CLIENT_ID` → `SPOTIPY_CLIENT_ID`
+- Download engine changed: spotdl → YouTube search + yt-dlp
+- Format support reduced: Only FLAC and MP3 supported (automatic preference)
+- Plex playlist management removed (use Plex Smart Playlists instead)
+- File organization changed to `<Playlist>/<Artist>/<Album>/<Track>` structure (added playlist folder level)
+- **Plex libraries must now be named to match Spotify playlists** for 1-star deletion
+- Removed bidirectional sync for Discover Weekly/Release Radar
+- Added required `PLEX_URL` and `PLEX_TOKEN` variables
+- Added `DOWNLOAD_DELAY` for rate limit control
+
+**What stays the same:**
+- Basic configuration approach
+- Spotify playlist fetching
+- File organization structure
+
+**Migration steps:**
+1. Update environment variable names in your config
+2. Set `PLEX_URL` and `PLEX_TOKEN`
+3. **Ensure you're using your own Spotify credentials** (not shared/public keys)
+4. Point `MUSIC_PATH` to your Plex music library root
+5. **Create new Plex libraries with names matching Spotify playlists** (see Plex Library Setup section)
+6. Create Plex Smart Playlists to replace old automatic playlists
+7. Remove any old Docker volumes or cache files (`spotify_playlists.json` will be recreated)
+8. First run will re-download metadata but skip existing files
+9. **File reorganization:** Existing files in `<Artist>/<Album>/` will not be moved. New structure is `<Playlist>/<Artist>/<Album>/`. Consider reorganizing manually or starting fresh.
 
 ---
 
 ## Troubleshooting
 
-### Rate Limiting Issues
-**Problem:** Logs show `WARNING:root:Your application has reached a rate/request limit. Retry will occur after: X`
+### 🚫 Rate Limiting from Spotify
+**Problem:** Logs show `Your application has reached a rate/request limit. Retry will occur after: 86400`
+
+**Root Cause:** Too many API calls to Spotify during downloads.
+
+**Solutions:**
+1. **✅ Verify your credentials are being used:**
+   ```bash
+   # Set LOG_LEVEL to DEBUG
+   export LOG_LEVEL="DEBUG"
+   # Run Plexify and check logs for credential usage confirmation
+   ```
+
+2. **Create your own Spotify credentials** if using shared/public keys:
+   - Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+   - Create a new app to get fresh API quota
+   - Update `SPOTIPY_CLIENT_ID` and `SPOTIPY_CLIENT_SECRET`
+
+3. **Increase download delay:**
+   ```bash
+   export DOWNLOAD_DELAY="0.2"  # 5 req/sec instead of 10
+   ```
+
+4. **Reduce sync frequency:**
+   ```bash
+   export SECONDS_TO_WAIT="7200"  # 2 hours between syncs
+   ```
+
+5. **Reduce number of playlists:**
+   - Temporarily remove some URIs from `SPOTIFY_URIS`
+   - Process large playlists separately
+
+6. **Smart caching (enabled by default)** should prevent this on subsequent runs
+
+### 📁 Files Not Appearing in Plex
+**Problem:** Downloaded files don't show up in Plex
+
+**Solutions:**
+1. Verify `MUSIC_PATH` matches your Plex library path exactly
+2. Trigger a manual library scan: Plex Web UI → Library → Three-dot menu → Scan Library Files
+3. Check Plex scan logs for errors: Settings → Console → Logs
+4. Verify file permissions: Plex user needs read access to `MUSIC_PATH`
+5. Check if files exist: `ls -la $MUSIC_PATH/<Playlist>/<Artist>/<Album>/`
+6. Verify Smart Playlist filter matches folder path exactly
+7. **Check library names match playlist names** for proper organization
+
+### ⚠️ Invalid Library Section Error
+**Problem:** `Error fetching 1-star tracks from library 'Stoner.Blues.Rock': Invalid library section`
+
+**Cause:** Your Plex library name doesn't match the Spotify playlist name.
 
 **Solution:**
-1. Set up YouTube cookies (see `SPOTDL_COOKIE_FILE` above)
-2. Increase `DOWNLOAD_DELAY` to `5` or higher
-3. Let spotdl retry automatically (it will wait and retry)
+1. Check your Plex library names: Settings → Libraries
+2. Rename library to match Spotify playlist exactly (including dots, spaces, capitalization)
+3. Or create a new library with the correct name pointing to the playlist folder
 
-### Files Not Being Found
-**Problem:** Plexify downloads files you already have
+**Example:**
+- ❌ Plex library: `Music` → Playlist folder: `/data/Music/Stoner.Blues.Rock` (Won't work)
+- ✅ Plex library: `Stoner.Blues.Rock` → Playlist folder: `/data/Music/Stoner.Blues.Rock` (Works)
 
-**Solution:**
-1. Ensure `MUSIC_PATH` points to your main music library
-2. Check that existing files are within 2 folder levels (e.g., `Artist/Album/Track.mp3`)
-3. Verify file names contain artist and track name
+### 💾 Cache Issues
+**Problem:** Plexify keeps re-fetching playlists or shows wrong track counts
 
-### Download Timeouts
+**Solutions:**
+1. Delete cache file: `rm spotify_playlists.json`
+2. Restart Plexify (will do a full refresh)
+3. Check cache file is valid JSON: `cat spotify_playlists.json | python3 -m json.tool`
+
+### ⏱️ Download Timeouts
 **Problem:** Downloads timeout after 300 seconds
 
-**Solution:**
-1. Check your internet connection
-2. Verify `spotdl` is installed: `spotdl --version`
-3. Try downloading manually: `spotdl 'https://open.spotify.com/track/TRACK_ID'`
+**Solutions:**
+1. Check your internet connection speed
+2. Verify `yt-dlp` is installed: `yt-dlp --version`
+3. Test manual download: `yt-dlp "ytsearch:Artist - Track Name"`
+4. Check yt-dlp output in logs for specific errors (YouTube blocks, regional restrictions, etc.)
 
-### Logs Too Verbose
-**Problem:** Too much debug output
+### 🔇 No Download Progress Visible
+**Problem:** Logs stuck at "Downloading: Artist - Track"
 
-**Solution:**
-```bash
-export LOG_LEVEL="INFO"           # Python app logs
-export SPOTDL_LOG_LEVEL="WARNING" # spotdl logs only warnings/errors
-```
+**Solution:** Set `LOG_LEVEL=DEBUG` to see detailed yt-dlp output. If still stuck for >5 minutes:
+1. Check if yt-dlp process is running: `ps aux | grep yt-dlp`
+2. Kill hung process: `pkill yt-dlp`
+3. Restart Plexify
 
----
+### 🔄 Environment Variables Not Working
+**Problem:** Application can't find environment variables
 
-## Migration from Old Version
+**Solutions:**
+1. Verify variables are exported: `echo $SPOTIPY_CLIENT_ID`
+2. If empty, export again in current shell session
+3. For persistent variables, add to `~/.bashrc` or `~/.zshrc`:
+   ```bash
+   export SPOTIPY_CLIENT_ID="..."
+   export SPOTIPY_CLIENT_SECRET="..."
+   # etc.
+   ```
+4. Source the file: `source ~/.bashrc`
 
-If you used the old Plexify with automatic Plex playlist management:
+### 🎵 Wrong Tracks Downloaded
+**Problem:** App downloads songs that don't match the Spotify track
 
-1. **Existing Plex playlists are safe** - this version doesn't touch them
-2. **Create Smart Playlists** for each playlist you want to keep synced
-3. **Point Smart Playlists** to the folders Plexify creates
-4. **Optional:** Delete old Plex playlists once Smart Playlists are working
-
-Your downloaded music files remain unchanged. Only the playlist management approach changes.
+**This should no longer happen** with the YouTube search approach. If it does:
+1. Set `LOG_LEVEL=DEBUG` to see search queries
+2. Check if the YouTube search query matches your expected track
+3. Manually search YouTube for the same query to verify results
+4. Report as a bug with specific track details
 
 ---
 
 ## Requirements
 
 - Python 3.11+
-- `spotipy` (Spotify API)
-- `spotdl` (YouTube Music downloader)
-- `eyed3` (MP3 tagging)
-- `yt-dlp` (optional, for cookie extraction)
+- `spotipy` (Spotify API client)
+- `yt-dlp` (YouTube downloader)
+- `youtubesearchpython` (YouTube search)
+- `plexapi` (Plex server integration)
+- `mutagen` (Audio metadata handling)
 
 Install with:
 ```bash
-pip install spotipy spotdl eyed3 yt-dlp
+pip install -r requirements.txt
 ```
-
----
-
-## License
-
-MIT License - see LICENSE file for details.
 
 ---
 
@@ -352,4 +533,3 @@ MIT License - see LICENSE file for details.
 
 For issues, feature requests, or questions:
 - GitHub Issues: [nyancod3r/plexify](https://github.com/nyancod3r/plexify/issues)
-- Remember: This is a **beta version** focused on Smart Playlists!

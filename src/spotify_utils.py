@@ -12,9 +12,9 @@ Key functions:
 """
 
 import re
-import spotipy
 import logging
-from typing import List
+import spotipy
+from typing import List, Dict
 from common_utils import retry_with_backoff
 
 # Parses a Spotify URI into its components (e.g., user, playlist)
@@ -85,3 +85,13 @@ def getSpotifyTracks(sp: spotipy.client, playlist: []) -> []:
         logging.debug(f"Retrieved additional {len(tracks['items'])} tracks for playlist: {playlist['name']}")
     logging.info(f"Retrieved total {len(spotifyTracks)} tracks for playlist: {playlist['name']}")
     return spotifyTracks
+
+def removeTrackFromPlaylist(sp: spotipy.Spotify, playlistId: str, trackId: str):
+    """
+    Removes a track from a Spotify playlist.
+    """
+    try:
+        retry_with_backoff(sp.playlist_remove_all_occurrences_of_items, playlistId, [trackId])
+        logging.info(f"Removed track {trackId} from playlist {playlistId}")
+    except Exception as e:
+        logging.error(f"Failed to remove track {trackId} from playlist {playlistId}: {e}")
