@@ -3,7 +3,6 @@
 **⚠️ This is a breaking change that drops automatic Plex playlist management in favor of Plex Smart Playlists**
 
 Plexify automatically syncs Spotify playlists to your local filesystem, downloading tracks using **YouTube search + yt-dlp**. Files are organized by playlist, then artist and album for seamless Plex library integration. Use **Plex Smart Playlists** (filtered by folder path) to surface these files in Plex.
-
 ---
 
 ## ✨ Features
