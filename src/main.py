@@ -13,7 +13,7 @@ from spotipy.oauth2 import SpotifyClientCredentials
 from plexapi.server import PlexServer
 
 from utils import runSync, parseSpotifyURI
-from plex_utils import get_one_star_tracks, delete_plex_track
+from plex_utils import get_one_star_tracks, delete_plex_track, reset_stats, print_sync_recap
 from spotify_utils import removeTrackFromPlaylist
 
 # Configure logging
@@ -62,12 +62,18 @@ def main():
 
     while True:
         try:
+            # At the start of each sync cycle
+            reset_stats()
+
             # Sync playlists from Spotify
             synced_playlists = runSync(sp, parsed_uris)
             
             # Process 1-star deletions for each synced playlist
             process_one_star_deletions(plex, sp, synced_playlists)
             
+            # At the end of each sync cycle (before sleeping)
+            print_sync_recap()
+
             logging.info(f"⏰ Waiting {seconds_to_wait} seconds before next sync...")
             time.sleep(seconds_to_wait)
         except KeyboardInterrupt:
@@ -93,6 +99,9 @@ def process_one_star_deletions(plex: PlexServer, sp: spotipy.Spotify, playlists:
             logging.warning(f"⚠️ Skipping playlist '{playlist_name}' - no ID found")
             continue
         
+        # Fetch full Spotify playlist data
+        spotify_playlist = sp.playlist(playlist_id, fields="tracks.items(track(id,name,artists))")
+        
         # Get 1-star tracks from Plex library (library name = playlist name)
         one_star_tracks = get_one_star_tracks(plex, playlist_name)
         
@@ -108,7 +117,7 @@ def process_one_star_deletions(plex: PlexServer, sp: spotipy.Spotify, playlists:
             track_artist = track_info['artist']
             
             # Find matching Spotify track in the playlist
-            spotify_track_id = find_spotify_track_in_playlist(sp, playlist, track_title, track_artist)
+            spotify_track_id = find_spotify_track_in_playlist(sp, spotify_playlist, track_title, track_artist)
             
             if spotify_track_id:
                 # Remove from Spotify playlist
@@ -123,7 +132,7 @@ def process_one_star_deletions(plex: PlexServer, sp: spotipy.Spotify, playlists:
             
             # Delete from Plex library and filesystem
             try:
-                delete_plex_track(plex_track)
+                delete_plex_track(plex_track, playlist_name)
                 total_deleted += 1
             except Exception as e:
                 logging.error(f"❌ Failed to delete from Plex: {e}")

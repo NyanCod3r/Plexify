@@ -2,7 +2,7 @@
 
 **⚠️ This is a breaking change that drops automatic Plex playlist management in favor of Plex Smart Playlists**
 
-Plexify automatically syncs Spotify playlists to your local filesystem, downloading tracks using `spotdl`. Files are organized by playlist, then artist and album for seamless Plex library integration. Use **Plex Smart Playlists** (filtered by folder path) to surface these files in Plex.
+Plexify automatically syncs Spotify playlists to your local filesystem, downloading tracks using **YouTube search + yt-dlp**. Files are organized by playlist, then artist and album for seamless Plex library integration. Use **Plex Smart Playlists** (filtered by folder path) to surface these files in Plex.
 
 ---
 
@@ -11,15 +11,15 @@ Plexify automatically syncs Spotify playlists to your local filesystem, download
 ### ✅ Currently Implemented
 
 - **🎵 Spotify Playlist Sync** - Automatically downloads all tracks from specified Spotify playlists
-- **📦 Smart File Organization** - Files organized as `MUSIC_PATH/<Playlist>/<Artist>/<Album>/<Track>.mp3`
+- **📦 Smart File Organization** - Files organized as `MUSIC_PATH/<Playlist>/<Artist>/<Album>/<Track>.flac`
 - **💾 Intelligent Caching** - Uses `snapshot_id` to detect playlist changes and minimize API calls
 - **🔄 Continuous Sync** - Runs in a loop with configurable wait time between syncs
-- **🎧 High-Quality Downloads** - Downloads tracks using spotdl (MP3 format)
-- **🎼 Format-Agnostic Detection** - Skips downloads if track exists in any audio format (mp3, flac, m4a, opus, ogg, wav)
+- **🎧 High-Quality Downloads** - Downloads tracks using YouTube search + yt-dlp (FLAC preferred, MP3 fallback)
+- **🎼 Smart Format Detection** - Automatically checks for existing FLAC files first, then MP3
 - **🏷️ Metadata Tagging** - Automatically tags downloaded files with artist, track, and album information
-- **📊 Detailed Logging** - Configurable log levels for both application and spotdl
+- **📊 Detailed Logging** - Configurable log levels for both application and yt-dlp
 - **⚡ Rate Limit Protection** - Built-in retry logic with exponential backoff for API calls and download delays
-- **🔑 Credential Passthrough** - Automatically passes your Spotify credentials to spotdl to prevent rate limiting
+- **🔑 Credential Passthrough** - Automatically passes your Spotify credentials to prevent rate limiting
 - **🐳 Docker Support** - Ready-to-use Docker container for easy deployment
 - **⭐ 1-Star Rating Cleanup** - Automatically remove tracks rated 1-star in Plex from Spotify playlists and local storage
 
@@ -38,18 +38,25 @@ Plexify automatically syncs Spotify playlists to your local filesystem, download
 - ❌ Plex API playlist operations
 - ❌ Bidirectional sync logic
 - ❌ Track removal from Plex playlists
+- ❌ `spotdl` dependency (replaced with YouTube search + yt-dlp)
 
 **NEW APPROACH:**
+- ✅ **YouTube search + yt-dlp** replaces spotdl for reliable track downloads
+- ✅ **Automatic FLAC preference** - Downloads FLAC when available, MP3 as fallback
 - ✅ Downloads tracks to `MUSIC_PATH/<Playlist>/<Artist>/<Album>/`
 - ✅ Smart playlist caching with snapshot-based change detection
 - ✅ **Plex library sections must match Spotify playlist names** for 1-star deletion feature
-- ✅ **Spotify credentials automatically passed to spotdl** to prevent rate limiting
-- ✅ **Configurable download delays** to respect Spotify API rate limits (20 req/sec max)
-- ✅ **Format-agnostic file detection** - Won't re-download if FLAC or other formats exist
+- ✅ **Spotify credentials automatically passed** to prevent rate limiting
+- ✅ **Configurable download delays** to respect API rate limits
+- ✅ **Smart format detection** - Checks for FLAC first, then MP3
 - ✅ You create Plex Smart Playlists manually (one-time setup)
 - ✅ Plex Smart Playlists auto-update based on folder contents
 
-**Why this change?** Plex Smart Playlists are more reliable, faster, and eliminate API sync issues. Smart caching dramatically reduces Spotify API calls and prevents rate limiting.
+**Why this change?** 
+- `spotdl` was downloading wrong tracks due to lyrics processing corruption
+- YouTube search + yt-dlp provides more reliable track matching
+- FLAC-first preference gives you the best quality available
+- Plex Smart Playlists are more reliable than API sync
 
 ---
 
@@ -129,21 +136,25 @@ As Plexify downloads new tracks, your Smart Playlists auto-update. No API calls 
 | `MUSIC_PATH` | Absolute path where music files are stored/downloaded. | Yes | `/music` |
 | `PLEX_URL` | Full URL for your Plex server (e.g., http://localhost:32400). | Yes | |
 | `PLEX_TOKEN` | Your Plex authentication token. | Yes | |
+| `PREFER_FLAC` | Download FLAC when available, MP3 fallback (true/false). | No | `true` |
 | `SECONDS_TO_WAIT` | Seconds to wait between sync cycles. | No | `3600` |
 | `LOG_LEVEL` | Python logging level (DEBUG, INFO, WARNING, ERROR). | No | `INFO` |
-| `SPOTDL_LOG_LEVEL` | spotdl logging level (separate from LOG_LEVEL). | No | Same as `LOG_LEVEL` |
-| `DOWNLOAD_DELAY` | Seconds to wait between track downloads (rate limiting). | No | `0.05` |
+| `DOWNLOAD_DELAY` | Seconds to wait between track downloads (rate limiting). | No | `0.1` |
 
 ### Environment Variables Explained
 
-**`SPOTIPY_CLIENT_ID` & `SPOTIPY_CLIENT_SECRET`**  
-Your personal Spotify API credentials. These are automatically passed to spotdl to prevent rate limiting. Without your own credentials, spotdl uses public/shared keys that quickly hit rate limits.
+**`PREFER_FLAC`**  
+Controls download format preference:
+- `true` (default): Downloads FLAC when available, falls back to MP3 if FLAC fails
+- `false`: Downloads MP3 only (saves storage space)
 
-**`SPOTDL_LOG_LEVEL`**  
-Controls verbosity of spotdl output. Set to `DEBUG` to see detailed download progress, or `INFO` for cleaner logs. If not set, inherits from `LOG_LEVEL`.
+File detection always checks for both FLAC and MP3 regardless of this setting - won't re-download if either format exists.
+
+**`SPOTIPY_CLIENT_ID` & `SPOTIPY_CLIENT_SECRET`**  
+Your personal Spotify API credentials. These are automatically passed to prevent rate limiting. Without your own credentials, the app uses shared keys that quickly hit rate limits.
 
 **`DOWNLOAD_DELAY`**  
-Time to wait between each track download. Default is `0.05` seconds (20 requests/second), which respects Spotify's recommended rate limit of ~180 requests/minute. Increase this value if you still encounter rate limiting (e.g., `0.1` for 10 req/sec).
+Time to wait between each track download. Default is `0.1` seconds (10 requests/second), which respects Spotify's recommended rate limit. Increase this value if you still encounter rate limiting (e.g., `0.2` for 5 req/sec).
 
 **Example SPOTIFY_URIS:**
 ```
@@ -159,7 +170,7 @@ spotify:user:USERNAME,spotify:playlist:PLAYLIST_ID,spotify:playlist:ANOTHER_ID
 3. Copy your Client ID and Client Secret
 4. Set redirect URI to `http://localhost:8888/callback`
 
-Your credentials are passed to spotdl automatically - no manual configuration needed.
+Your credentials are automatically used - no manual configuration needed.
 
 ### Getting Your Plex Token
 
@@ -182,8 +193,9 @@ export SPOTIFY_URIS="spotify:user:your_username"
 export MUSIC_PATH="/data/Music"
 export PLEX_URL="http://localhost:32400"
 export PLEX_TOKEN="your_plex_token"
+export PREFER_FLAC="true"  # Optional: FLAC preferred (default), set to "false" for MP3-only
 export LOG_LEVEL="INFO"
-export DOWNLOAD_DELAY="0.05"  # Optional: 20 req/sec (default)
+export DOWNLOAD_DELAY="0.1"  # Optional: 10 req/sec (default)
 
 python src/main.py
 ```
@@ -199,9 +211,9 @@ docker run -d \
   -e MUSIC_PATH="/music" \
   -e PLEX_URL="http://plex:32400" \
   -e PLEX_TOKEN="your_plex_token" \
+  -e PREFER_FLAC="true" \
   -e LOG_LEVEL="INFO" \
-  -e SPOTDL_LOG_LEVEL="INFO" \
-  -e DOWNLOAD_DELAY="0.05" \
+  -e DOWNLOAD_DELAY="0.1" \
   -v /path/to/your/music:/music \
   nyancod3r/plexify:latest
 ```
@@ -215,17 +227,17 @@ MUSIC_PATH/
 ├── Stoner.Blues.Rock/                    (Playlist 1 = Plex Library 1)
 │   ├── Black Sabbath/
 │   │   ├── Paranoid/
-│   │   │   ├── Black Sabbath - War Pigs.mp3
-│   │   │   └── Black Sabbath - Paranoid.flac
+│   │   │   ├── Black Sabbath - War Pigs.flac
+│   │   │   └── Black Sabbath - Paranoid.mp3
 │   │   └── Master of Reality/
-│   │       └── Black Sabbath - Sweet Leaf.mp3
+│   │       └── Black Sabbath - Sweet Leaf.flac
 │   └── Kyuss/
 │       └── Blues for the Red Sun/
-│           └── Kyuss - Thumb.mp3
+│           └── Kyuss - Thumb.flac
 └── Chill.Vibes/                          (Playlist 2 = Plex Library 2)
     └── Tycho/
         └── Dive/
-            └── Tycho - A Walk.m4a
+            └── Tycho - A Walk.flac
 ```
 
 **Structure explained:**
@@ -233,15 +245,17 @@ MUSIC_PATH/
 2. **Level 2:** Spotify playlist name (sanitized for filesystem) - **This must match your Plex library name**
 3. **Level 3:** Artist name from track metadata
 4. **Level 4:** Album name from track metadata
-5. **Level 5:** Track file: `Artist - Track.extension` (supports `.mp3`, `.flac`, `.m4a`, `.opus`, `.ogg`, `.wav`)
+5. **Level 5:** Track file: `Artist - Track.flac` (or `.mp3` if FLAC unavailable)
 
 **File naming convention:** `Artist - Track.extension`
+
+**Format priority:** FLAC preferred, MP3 fallback - automatic, no configuration needed.
 
 This structure allows you to:
 - Create Plex libraries that map directly to Spotify playlists
 - Enable 1-star deletion (library name = playlist name = folder name)
 - Create Plex Smart Playlists per Spotify playlist (`Folder contains /music/Stoner.Blues.Rock`)
-- Mix different audio formats - Plexify won't re-download if any format exists
+- Get the highest quality available (FLAC when possible)
 - Identify tracks easily: artist name is always in the filename
 - Avoid filename collisions when multiple artists have same track names
 
@@ -260,36 +274,51 @@ Plexify uses Spotify's `snapshot_id` to detect playlist changes. This dramatical
 This prevents rate limiting and saves bandwidth.
 
 ### ⚡ Rate Limit Protection
-Multiple layers of protection against Spotify API rate limits:
+Multiple layers of protection against API rate limits:
 
-1. **Credential Passthrough**: Your `SPOTIPY_CLIENT_ID` and `SPOTIPY_CLIENT_SECRET` are automatically passed to spotdl via command-line arguments
-2. **Download Delays**: Configurable delay between downloads (default 0.05s = 20 req/sec)
+1. **Credential Management**: Your `SPOTIPY_CLIENT_ID` and `SPOTIPY_CLIENT_SECRET` are automatically used
+2. **Download Delays**: Configurable delay between downloads (default 0.1s = 10 req/sec)
 3. **Exponential Backoff**: Built-in retry logic for failed API calls
 4. **Smart Caching**: Minimizes API calls by only fetching changed playlists
 
-**Spotify's Rate Limits:**
-- Approximate limit: 180 requests per minute
-- Measurement window: Rolling 30-second timeframe
-- Recommended: Max 20 requests per second
-- Error code: 429 (Too Many Requests)
+### 🎼 Smart Format Detection & Download
 
-### 🎼 Format-Agnostic File Detection
+**File Detection (when checking if track exists):**
+1. First checks for `Artist - Track.flac`
+2. Then checks for `Artist - Track.mp3`
+3. If either exists, skips download
 
-Before downloading a track, Plexify checks if it already exists in **any** supported audio format:
-- `.mp3` - MPEG Audio Layer 3
-- `.flac` - Free Lossless Audio Codec
-- `.m4a` - MPEG-4 Audio
-- `.opus` - Opus Interactive Audio Codec
-- `.ogg` - Ogg Vorbis
-- `.wav` - Waveform Audio File Format
+**Download Priority (when downloading new tracks):**
+1. Attempts to download FLAC from best available YouTube source
+2. If FLAC unavailable or fails, downloads MP3
+3. Uses yt-dlp format selector: `bestaudio[ext=flac]/bestaudio[acodec*=flac]/bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best`
 
-**Example scenario:**
-- Playlist has "Black Sabbath - War Pigs"
-- You already have `War Pigs.flac` in your library
-- Plexify detects the FLAC file and **skips** the MP3 download
-- No duplicate files, saves bandwidth and storage
+**Example scenarios:**
+- New track: Downloads FLAC if available from YouTube, MP3 otherwise
+- Existing FLAC: Skips download entirely
+- Existing MP3: Skips download entirely (won't upgrade to FLAC)
+- No existing file: Downloads best quality available
 
-This is especially useful if you've manually added high-quality FLAC files and don't want them replaced with MP3s.
+### 🎯 YouTube Search + yt-dlp Download Process
+
+**Why we replaced spotdl:**
+- spotdl was downloading wrong tracks due to lyrics processing corruption
+- Example: Requesting "Dirty Streets - White Horse" would download "Bonez MC - bissu dumm"
+- YouTube search + yt-dlp provides direct control over track selection
+
+**Download process:**
+1. **Search Phase**: Use yt-dlp to search YouTube for "Artist - Track"
+2. **Selection Phase**: Get the top result video ID
+3. **Download Phase**: Use yt-dlp with format selectors to download audio
+4. **Fallback**: If YouTube fails, try spotdl as last resort (rarely used)
+
+**Format Selection:**
+- `bestaudio[ext=flac]` - Real FLAC if YouTube has it
+- `bestaudio[acodec*=flac]` - Any FLAC codec
+- `bestaudio[ext=m4a]` - High-quality AAC for conversion
+- `bestaudio[ext=webm]` - Usually Opus, good for conversion  
+- `bestaudio` - Any audio-only format
+- `best[height<=480]` - Low-res video as last resort (has audio)
 
 ### 🎵 Intelligent File Organization
 Files are organized using Spotify metadata with a 4-level hierarchy:
@@ -304,7 +333,7 @@ Examples:
 - `AC/DC` becomes `AC_DC`
 - `Stoner.Blues.Rock` becomes `Stoner.Blues.Rock` (dots are valid)
 - `My Playlist: Best Of` becomes `My Playlist_ Best Of`
-- File: `Black Sabbath - War Pigs.mp3`
+- File: `Black Sabbath - War Pigs.flac`
 
 ### 🏷️ Metadata Tagging
 All downloaded files are automatically tagged with:
@@ -345,6 +374,8 @@ When you rate a track 1-star in Plex, Plexify will:
 
 **Breaking Changes:**
 - Environment variables changed: `SPOTIFY_CLIENT_ID` → `SPOTIPY_CLIENT_ID`
+- Download engine changed: spotdl → YouTube search + yt-dlp
+- Format support reduced: Only FLAC and MP3 supported (automatic preference)
 - Plex playlist management removed (use Plex Smart Playlists instead)
 - File organization changed to `<Playlist>/<Artist>/<Album>/<Track>` structure (added playlist folder level)
 - **Plex libraries must now be named to match Spotify playlists** for 1-star deletion
@@ -353,9 +384,9 @@ When you rate a track 1-star in Plex, Plexify will:
 - Added `DOWNLOAD_DELAY` for rate limit control
 
 **What stays the same:**
-- Download functionality
-- Spotify playlist fetching
 - Basic configuration approach
+- Spotify playlist fetching
+- File organization structure
 
 **Migration steps:**
 1. Update environment variable names in your config
@@ -365,25 +396,24 @@ When you rate a track 1-star in Plex, Plexify will:
 5. **Create new Plex libraries with names matching Spotify playlists** (see Plex Library Setup section)
 6. Create Plex Smart Playlists to replace old automatic playlists
 7. Remove any old Docker volumes or cache files (`spotify_playlists.json` will be recreated)
-8. First run will re-download metadata but skip existing files (including FLAC/M4A)
+8. First run will re-download metadata but skip existing files
 9. **File reorganization:** Existing files in `<Artist>/<Album>/` will not be moved. New structure is `<Playlist>/<Artist>/<Album>/`. Consider reorganizing manually or starting fresh.
 
 ---
 
 ## Troubleshooting
 
-### 🚫 Rate Limiting from Spotify/spotdl
+### 🚫 Rate Limiting from Spotify
 **Problem:** Logs show `Your application has reached a rate/request limit. Retry will occur after: 86400`
 
-**Root Cause:** spotdl makes Spotify API calls for each track download. When combined with your app's API calls, rate limits are hit quickly.
+**Root Cause:** Too many API calls to Spotify during downloads.
 
 **Solutions:**
 1. **✅ Verify your credentials are being used:**
    ```bash
    # Set LOG_LEVEL to DEBUG
    export LOG_LEVEL="DEBUG"
-   # Run Plexify and check logs for:
-   # "DEBUG: Passing credentials to spotdl: client_id=abcd1234..."
+   # Run Plexify and check logs for credential usage confirmation
    ```
 
 2. **Create your own Spotify credentials** if using shared/public keys:
@@ -393,7 +423,7 @@ When you rate a track 1-star in Plex, Plexify will:
 
 3. **Increase download delay:**
    ```bash
-   export DOWNLOAD_DELAY="0.1"  # 10 req/sec instead of 20
+   export DOWNLOAD_DELAY="0.2"  # 5 req/sec instead of 10
    ```
 
 4. **Reduce sync frequency:**
@@ -406,12 +436,6 @@ When you rate a track 1-star in Plex, Plexify will:
    - Process large playlists separately
 
 6. **Smart caching (enabled by default)** should prevent this on subsequent runs
-
-**Why it happens:** 
-- Spotify limits ~180 requests/minute per application
-- Each track download = 1+ API calls from spotdl
-- Large playlists (900+ tracks) can exceed limits quickly
-- Public/shared credentials are already rate-limited by other users
 
 ### 📁 Files Not Appearing in Plex
 **Problem:** Downloaded files don't show up in Plex
@@ -452,16 +476,16 @@ When you rate a track 1-star in Plex, Plexify will:
 
 **Solutions:**
 1. Check your internet connection speed
-2. Verify `spotdl` is installed: `spotdl --version`
-3. Test manual download: `spotdl 'Artist - Track Name'`
-4. Check spotdl output in logs for specific errors (YouTube blocks, regional restrictions, etc.)
+2. Verify `yt-dlp` is installed: `yt-dlp --version`
+3. Test manual download: `yt-dlp "ytsearch:Artist - Track Name"`
+4. Check yt-dlp output in logs for specific errors (YouTube blocks, regional restrictions, etc.)
 
 ### 🔇 No Download Progress Visible
 **Problem:** Logs stuck at "Downloading: Artist - Track"
 
-**Solution:** Set `SPOTDL_LOG_LEVEL=DEBUG` to see detailed spotdl output. If still stuck for >5 minutes:
-1. Check if spotdl process is running: `ps aux | grep spotdl`
-2. Kill hung process: `pkill spotdl`
+**Solution:** Set `LOG_LEVEL=DEBUG` to see detailed yt-dlp output. If still stuck for >5 minutes:
+1. Check if yt-dlp process is running: `ps aux | grep yt-dlp`
+2. Kill hung process: `pkill yt-dlp`
 3. Restart Plexify
 
 ### 🔄 Environment Variables Not Working
@@ -478,15 +502,25 @@ When you rate a track 1-star in Plex, Plexify will:
    ```
 4. Source the file: `source ~/.bashrc`
 
+### 🎵 Wrong Tracks Downloaded
+**Problem:** App downloads songs that don't match the Spotify track
+
+**This should no longer happen** with the YouTube search approach. If it does:
+1. Set `LOG_LEVEL=DEBUG` to see search queries
+2. Check if the YouTube search query matches your expected track
+3. Manually search YouTube for the same query to verify results
+4. Report as a bug with specific track details
+
 ---
 
 ## Requirements
 
 - Python 3.11+
 - `spotipy` (Spotify API client)
-- `spotdl` (YouTube Music downloader)
+- `yt-dlp` (YouTube downloader)
+- `youtubesearchpython` (YouTube search)
 - `plexapi` (Plex server integration)
-- `eyed3` (MP3 metadata handling)
+- `mutagen` (Audio metadata handling)
 
 Install with:
 ```bash
