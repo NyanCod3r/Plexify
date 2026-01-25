@@ -153,6 +153,16 @@ def main():
 
     while True:
         try:
+            # Recreate Spotify client at the start of each sync cycle
+            # This ensures we always have a fresh token, even after long sleeps
+            logging.info("🔄 Creating fresh Spotify client for this sync cycle...")
+            sp, error = create_resilient_spotify_client()
+            if error:
+                logging.error(f"❌ Failed to create Spotify client: {error}")
+                logging.info("⏳ Waiting 60 seconds before retry...")
+                time.sleep(60)
+                continue
+
             # At the start of each sync cycle
             reset_stats()
 
@@ -168,18 +178,6 @@ def main():
             logging.info(f"⏰ Waiting {seconds_to_wait} seconds before next sync...")
             time.sleep(seconds_to_wait)
             
-        except spotipy.exceptions.SpotifyException as e:
-            if e.http_status == 401:  # Token expired
-                logging.warning("🔄 Spotify token expired, recreating client...")
-                sp, error = create_resilient_spotify_client()
-                if error:
-                    logging.error(f"❌ Failed to recreate Spotify client: {error}")
-                    logging.info("⏳ Waiting 60 seconds before retry...")
-                    time.sleep(60)
-                    continue
-                logging.info("✅ Successfully recreated Spotify client")
-                continue  # Skip sleep, retry immediately
-                
         except KeyboardInterrupt:
             logging.info("👋 Shutting down Plexify.") 
             break
