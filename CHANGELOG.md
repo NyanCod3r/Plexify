@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.0.0](https://github.com/NyanCod3r/Plexify/compare/v2.0.0...v3.0.0) (2026-01-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* Add OAuth refresh token support for Spotify playlist modifications
+
+### Features
+
+* Add OAuth refresh token support for Spotify playlist modifications ([5c60f82](https://github.com/NyanCod3r/Plexify/commit/5c60f82f29d789e3ac5df074e47864491e33eec1))
+
 ## [1.3.2](https://github.com/NyanCod3r/Plexify/compare/v1.3.1...v1.3.2) (2025-11-03)
 
 
