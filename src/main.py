@@ -57,13 +57,11 @@ def get_spotify_client():
             cache_path=None  # Don't cache, we manage the token ourselves
         )
         
-        # Manually set the refresh token and get a new access token
-        token_info = auth_manager.refresh_access_token(refresh_token)
+        # Set the refresh token directly in the auth manager
+        auth_manager.refresh_token = refresh_token
         
-        if not token_info or 'access_token' not in token_info:
-            return None, "Failed to refresh Spotify access token"
-        
-        sp = spotipy.Spotify(auth=token_info['access_token'])
+        # Let spotipy handle token refresh automatically
+        sp = spotipy.Spotify(auth_manager=auth_manager)
         return sp, None
     else:
         # Fall back to ClientCredentials - read-only access
@@ -76,6 +74,46 @@ def get_spotify_client():
             client_secret=client_secret
         ))
         return sp, None
+
+
+def create_resilient_spotify_client():
+    """
+    Create a Spotify client that automatically handles token refresh and retries on auth failures.
+    """
+    max_retries = 3
+    retry_delay = 5
+    
+    for attempt in range(max_retries):
+        try:
+            sp, error = get_spotify_client()
+            if error:
+                logging.error(f"❌ Authentication attempt {attempt + 1} failed: {error}")
+                if attempt < max_retries - 1:
+                    logging.info(f"⏳ Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                    continue
+                return None, error
+            
+            # Test the connection
+            sp.user('test')  # This will fail if auth is invalid
+            return sp, None
+            
+        except spotipy.exceptions.SpotifyException as e:
+            if e.http_status == 401:  # Unauthorized
+                logging.warning(f"⚠️  Auth failed on attempt {attempt + 1}: {e}")
+                if attempt < max_retries - 1:
+                    logging.info(f"⏳ Retrying authentication in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                    continue
+            return None, f"Spotify authentication failed: {e}"
+        except Exception as e:
+            logging.error(f"❌ Unexpected error on attempt {attempt + 1}: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay)
+                continue
+            return None, f"Failed to create Spotify client: {e}"
+    
+    return None, "Max authentication retries exceeded"
 
 
 # Entry point of the application
@@ -92,8 +130,8 @@ def main():
         logging.error("❌ SPOTIFY_URIS not set. Exiting.")
         return
 
-    # Get Spotify client with appropriate auth
-    sp, error = get_spotify_client()
+    # Get Spotify client with resilient auth
+    sp, error = create_resilient_spotify_client()
     if error:
         logging.error(f"❌ {error}. Exiting.")
         return
@@ -129,6 +167,19 @@ def main():
 
             logging.info(f"⏰ Waiting {seconds_to_wait} seconds before next sync...")
             time.sleep(seconds_to_wait)
+            
+        except spotipy.exceptions.SpotifyException as e:
+            if e.http_status == 401:  # Token expired
+                logging.warning("🔄 Spotify token expired, recreating client...")
+                sp, error = create_resilient_spotify_client()
+                if error:
+                    logging.error(f"❌ Failed to recreate Spotify client: {error}")
+                    logging.info("⏳ Waiting 60 seconds before retry...")
+                    time.sleep(60)
+                    continue
+                logging.info("✅ Successfully recreated Spotify client")
+                continue  # Skip sleep, retry immediately
+                
         except KeyboardInterrupt:
             logging.info("👋 Shutting down Plexify.") 
             break
