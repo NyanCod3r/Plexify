@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.2](https://github.com/NyanCod3r/Plexify/compare/v3.0.1...v3.0.2) (2026-01-25)
+
+
+### Bug Fixes
+
+* **auth:** fix spotify oauth to use refresh token without interactive auth ([fa6d688](https://github.com/NyanCod3r/Plexify/commit/fa6d6884d8f97e3920e5a8e9504e1e6b00ef6acc))
+
 ## [3.0.1](https://github.com/NyanCod3r/Plexify/compare/v3.0.0...v3.0.1) (2026-01-25)
 
 
