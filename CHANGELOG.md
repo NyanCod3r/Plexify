@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.0.1](https://github.com/NyanCod3r/Plexify/compare/v3.0.0...v3.0.1) (2026-01-25)
+
+
+### Bug Fixes
+
+* **auth:** automatic spotify token refresh in containers ([e359547](https://github.com/NyanCod3r/Plexify/commit/e35954703fcac1b488c6992aa76feca79295a291))
+* **auth:** automatic spotify token refresh in containers ([fdba459](https://github.com/NyanCod3r/Plexify/commit/fdba459bf80b848cfc4809331698f54ba7028bc7))
+
 ## [3.0.0](https://github.com/NyanCod3r/Plexify/compare/v2.0.0...v3.0.0) (2026-01-25)
 
 
