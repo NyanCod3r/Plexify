@@ -267,8 +267,7 @@ export DOWNLOAD_DELAY="0.1"  # Optional: 10 req/sec (default)
 python src/main.py
 ```
 
-### Docker
-
+### Docker 
 ```bash
 docker run -d \
   --name=plexify \
