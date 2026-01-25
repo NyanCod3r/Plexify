@@ -9,7 +9,7 @@ import os
 import logging
 import time
 import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
+from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
 from plexapi.server import PlexServer
 
 from utils import runSync, parseSpotifyURI
@@ -25,6 +25,59 @@ logging.basicConfig(
 
 logging.info("🚀 Starting Plexify...")
 
+# Required scopes for playlist modification
+SPOTIFY_SCOPES = "playlist-modify-public playlist-modify-private playlist-read-private"
+SPOTIFY_REDIRECT_URI = "http://127.0.0.1:8888/callback"
+
+
+def get_spotify_client():
+    """
+    Creates a Spotify client with appropriate authentication.
+    
+    If SPOTIFY_REFRESH_TOKEN is set, uses OAuth (allows playlist modifications).
+    Otherwise falls back to ClientCredentials (read-only, no playlist modifications).
+    """
+    client_id = os.environ.get('SPOTIPY_CLIENT_ID')
+    client_secret = os.environ.get('SPOTIPY_CLIENT_SECRET')
+    refresh_token = os.environ.get('SPOTIFY_REFRESH_TOKEN')
+    
+    if not client_id or not client_secret:
+        return None, "Spotify credentials not set"
+    
+    if refresh_token:
+        # Use OAuth with refresh token - enables playlist modifications
+        logging.info("🔐 Using OAuth authentication (playlist modifications enabled)")
+        
+        auth_manager = SpotifyOAuth(
+            client_id=client_id,
+            client_secret=client_secret,
+            redirect_uri=SPOTIFY_REDIRECT_URI,
+            scope=SPOTIFY_SCOPES,
+            open_browser=False,  # Never open browser in Docker
+            cache_path=None  # Don't cache, we manage the token ourselves
+        )
+        
+        # Manually set the refresh token and get a new access token
+        token_info = auth_manager.refresh_access_token(refresh_token)
+        
+        if not token_info or 'access_token' not in token_info:
+            return None, "Failed to refresh Spotify access token"
+        
+        sp = spotipy.Spotify(auth=token_info['access_token'])
+        return sp, None
+    else:
+        # Fall back to ClientCredentials - read-only access
+        logging.warning("⚠️  SPOTIFY_REFRESH_TOKEN not set - using read-only mode")
+        logging.warning("⚠️  Track removal from Spotify playlists will NOT work!")
+        logging.warning("⚠️  Run generate_spotify_token.py to get a refresh token")
+        
+        sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
+            client_id=client_id,
+            client_secret=client_secret
+        ))
+        return sp, None
+
+
 # Entry point of the application
 def main():
     spotify_client_id = os.environ.get('SPOTIPY_CLIENT_ID')
@@ -39,11 +92,11 @@ def main():
         logging.error("❌ SPOTIFY_URIS not set. Exiting.")
         return
 
-    # Use SpotifyClientCredentials instead of SpotifyOAuth (no browser needed)
-    sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
-        client_id=spotify_client_id,
-        client_secret=spotify_client_secret
-    ))
+    # Get Spotify client with appropriate auth
+    sp, error = get_spotify_client()
+    if error:
+        logging.error(f"❌ {error}. Exiting.")
+        return
 
     logging.info("✅ Successfully authenticated with Spotify.")
 

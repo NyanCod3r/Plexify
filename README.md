@@ -3,6 +3,7 @@
 **⚠️ This is a breaking change that drops automatic Plex playlist management in favor of Plex Smart Playlists**
 
 Plexify automatically syncs Spotify playlists to your local filesystem, downloading tracks using **YouTube search + yt-dlp**. Files are organized by playlist, then artist and album for seamless Plex library integration. Use **Plex Smart Playlists** (filtered by folder path) to surface these files in Plex.
+
 ---
 
 ## ✨ Features
@@ -131,10 +132,13 @@ As Plexify downloads new tracks, your Smart Playlists auto-update. No API calls 
 | :--- | :--- | :--- | :--- |
 | `SPOTIPY_CLIENT_ID` | Your Spotify application client ID. | Yes | |
 | `SPOTIPY_CLIENT_SECRET` | Your Spotify application client secret. | Yes | |
+| `SPOTIFY_REFRESH_TOKEN` | OAuth refresh token for playlist modifications. See [OAuth Setup](#-oauth-setup-for-playlist-modifications). | Yes* | |
 | `SPOTIFY_URIS` | Comma-separated Spotify URIs (user or playlist). | Yes | |
 | `MUSIC_PATH` | Absolute path where music files are stored/downloaded. | Yes | `/music` |
 | `PLEX_URL` | Full URL for your Plex server (e.g., http://localhost:32400). | Yes | |
 | `PLEX_TOKEN` | Your Plex authentication token. | Yes | |
+
+*Required for 1-star deletion feature. Without it, the app runs in read-only mode (downloads work, but track removal from Spotify playlists won't).
 | `PREFER_FLAC` | Download FLAC when available, MP3 fallback (true/false). | No | `true` |
 | `SECONDS_TO_WAIT` | Seconds to wait between sync cycles. | No | `3600` |
 | `LOG_LEVEL` | Python logging level (DEBUG, INFO, WARNING, ERROR). | No | `INFO` |
@@ -167,7 +171,8 @@ spotify:user:USERNAME,spotify:playlist:PLAYLIST_ID,spotify:playlist:ANOTHER_ID
 1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 2. Create a new app
 3. Copy your Client ID and Client Secret
-4. Set redirect URI to `http://localhost:8888/callback`
+4. Add redirect URI: `http://127.0.0.1:8888/callback` (required for OAuth setup)
+5. See [OAuth Setup](#-oauth-setup-for-playlist-modifications) to generate your refresh token
 
 Your credentials are automatically used - no manual configuration needed.
 
@@ -179,6 +184,68 @@ Your credentials are automatically used - no manual configuration needed.
 4. Look for `X-Plex-Token=` in the URL
 5. Copy the token value
 
+### 🔐 OAuth Setup for Playlist Modifications
+
+**Why is this needed?**  
+Spotify's basic "Client Credentials" authentication only allows read-only access. To **remove tracks from playlists** (1-star deletion feature), you need OAuth user authorization.
+
+**The solution:** Generate a **refresh token** once on your local machine, then use it forever in Docker.
+
+#### Step 1: Add Redirect URI to Spotify App
+
+1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+2. Click your app → **Settings**
+3. Under **Redirect URIs**, add:
+   ```
+   http://127.0.0.1:8888/callback
+   ```
+4. Click **Save**
+
+#### Step 2: Generate Refresh Token (One-Time Setup)
+
+Run this **on your local machine** (not on the NAS/Docker host) - it requires a browser:
+
+```bash
+# Clone or download the repo
+cd Plexify
+
+# Set your credentials
+export SPOTIPY_CLIENT_ID="your_client_id"
+export SPOTIPY_CLIENT_SECRET="your_client_secret"
+
+# Run the token generator
+python generate_spotify_token.py
+```
+
+A browser window will open → Log in to Spotify → Authorize the app → The script prints your refresh token.
+
+#### Step 3: Add Token to Docker Configuration
+
+Copy the printed `SPOTIFY_REFRESH_TOKEN` value to your `docker-compose.yml`:
+
+```yaml
+environment:
+  - SPOTIPY_CLIENT_ID=your_client_id
+  - SPOTIPY_CLIENT_SECRET=your_client_secret
+  - SPOTIFY_REFRESH_TOKEN=AQDxxxxxxxxxxxxxxxx   # <-- Add this line
+  # ... rest of your env vars
+```
+
+#### Step 4: Restart Docker
+
+```bash
+docker-compose down && docker-compose up -d
+```
+
+**That's it!** The refresh token is permanent (doesn't expire unless you revoke access in Spotify settings). You only need to do this once.
+
+**What if I don't set SPOTIFY_REFRESH_TOKEN?**  
+The app will run in **read-only mode**:
+- ✅ Downloading tracks works
+- ✅ Playlist syncing works  
+- ❌ Removing tracks from Spotify playlists (1-star feature) won't work
+- ⚠️ You'll see warnings in the logs about read-only mode
+
 ---
 
 ## Usage
@@ -188,6 +255,7 @@ Your credentials are automatically used - no manual configuration needed.
 ```bash
 export SPOTIPY_CLIENT_ID="your_spotify_client_id"
 export SPOTIPY_CLIENT_SECRET="your_spotify_client_secret"
+export SPOTIFY_REFRESH_TOKEN="your_refresh_token"  # Required for 1-star deletion
 export SPOTIFY_URIS="spotify:user:your_username"
 export MUSIC_PATH="/data/Music"
 export PLEX_URL="http://localhost:32400"
@@ -206,6 +274,7 @@ docker run -d \
   --name=plexify \
   -e SPOTIPY_CLIENT_ID="your_spotify_client_id" \
   -e SPOTIPY_CLIENT_SECRET="your_spotify_client_secret" \
+  -e SPOTIFY_REFRESH_TOKEN="your_refresh_token" \
   -e SPOTIFY_URIS="spotify:user:your_spotify_username" \
   -e MUSIC_PATH="/music" \
   -e PLEX_URL="http://plex:32400" \
