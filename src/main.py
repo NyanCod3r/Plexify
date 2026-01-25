@@ -57,12 +57,20 @@ def get_spotify_client():
             cache_path=None  # Don't cache, we manage the token ourselves
         )
         
-        # Set the refresh token directly in the auth manager
-        auth_manager.refresh_token = refresh_token
+        # Create token info dict with the refresh token
+        token_info = {
+            'refresh_token': refresh_token,
+            'access_token': None,
+            'expires_at': 0  # Force immediate refresh
+        }
         
-        # Let spotipy handle token refresh automatically
-        sp = spotipy.Spotify(auth_manager=auth_manager)
-        return sp, None
+        # Get a fresh access token using the refresh token
+        try:
+            token_info = auth_manager.refresh_access_token(refresh_token)
+            sp = spotipy.Spotify(auth=token_info['access_token'])
+            return sp, None
+        except Exception as e:
+            return None, f"Failed to refresh token: {e}"
     else:
         # Fall back to ClientCredentials - read-only access
         logging.warning("⚠️  SPOTIFY_REFRESH_TOKEN not set - using read-only mode")
