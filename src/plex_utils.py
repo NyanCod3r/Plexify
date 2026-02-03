@@ -614,17 +614,6 @@ def delete_plex_track(track, playlist_name: str = "Unknown"):
             logging.error(f"❌ Failed to delete from Plex library: {track_title} - {e}")
             failed_platforms.append('Plex')
         
-        # Try to delete local file
-        try:
-            if file_path and os.path.exists(file_path):
-                os.remove(file_path)
-                logging.info(f"📁 Deleted file: {file_path}")
-            else:
-                logging.warning(f"⚠️  File not found for deletion: {file_path}")
-        except Exception as e:
-            logging.error(f"❌ Failed to delete file: {file_path} - {e}")
-            failed_platforms.append('Filesystem')
-        
         # Track result
         if failed_platforms:
             track_deletion_failure()
