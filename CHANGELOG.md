@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.3](https://github.com/NyanCod3r/Plexify/compare/v3.0.2...v3.0.3) (2026-02-03)
+
+
+### Bug Fixes
+
+* **plex:** delete local file before Plex to avoid false 'file not found' warnings ([cba1665](https://github.com/NyanCod3r/Plexify/commit/cba1665b1e845d045648b15d6acfef5ca3ed9a40))
+
 ## [3.0.2](https://github.com/NyanCod3r/Plexify/compare/v3.0.1...v3.0.2) (2026-01-25)
 
 
