@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.5](https://github.com/NyanCod3r/Plexify/compare/v3.0.4...v3.0.5) (2026-03-02)
+
+
+### Bug Fixes
+
+* **deps:** bump spotdl to 4.4.3 to resolve yt-dlp 403 error[minor] ([#34](https://github.com/NyanCod3r/Plexify/issues/34)) ([e0416f0](https://github.com/NyanCod3r/Plexify/commit/e0416f0a97cd4c6fc06793b41bb5b778a73e41eb))
+
 ## [3.0.4](https://github.com/NyanCod3r/Plexify/compare/v3.0.3...v3.0.4) (2026-03-02)
 
 
