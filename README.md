@@ -1,3 +1,7 @@
+# Archived due to Spotify new API rules
+Please see [Plex Track Manager](https://github.com/NyanCod3r/Plex-Track-Manager)
+
+
 # Plexify
 
 **⚠️ This is a breaking change that drops automatic Plex playlist management in favor of Plex Smart Playlists**
